@@ -28,6 +28,14 @@ export class LoginComponent implements Component {
         app.authToken.subscribe((val, _) => onTokenChange(val));
         onTokenChange(app.userId.value);
 
+        /* Update username automatically */
+        const usernameSpan = logoutForm.querySelector(".username") as HTMLElement;
+        const onUsernameChange = (val: string | null) => {
+            usernameSpan.textContent = val || "unknown";
+        }
+        app.username.subscribe((val, _) => onUsernameChange(val));
+        onUsernameChange(app.username.value);
+
         /* Perform login on form submit */
         const usernameInput = loginForm.querySelector(".username") as HTMLInputElement;
         const passwordInput = loginForm.querySelector(".password") as HTMLInputElement;

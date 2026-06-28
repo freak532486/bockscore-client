@@ -6,6 +6,10 @@ import { Observable } from "./observable";
 export class App
 {
     public userId = new Observable<string | null>(null);
+    public username = new Observable<string | null>(null);
     public authToken = new Observable<string | null>(null);
     public csrfToken = new Observable<string | null>(null);
+
+    public selectedRankingId = new Observable<string | null>(null);
+    public selectedTableId = new Observable<string | null>(null);
 };
