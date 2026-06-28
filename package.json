@@ -1,0 +1,14 @@
+{
+  "name": "bockscore-client",
+  "version": "1.0.0",
+  "description": "An alternative client to the bockscore app.",
+  "scripts": {
+    "start": "serve -l tcp://0.0.0.0:3000",
+    "build": "esbuild src/main.ts --bundle --outfile=dist/bundle.js",
+    "dev": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --watch"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.1",
+    "serve": "^14.2.6"
+  }
+}
