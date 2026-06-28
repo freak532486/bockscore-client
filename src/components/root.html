@@ -1,0 +1,35 @@
+<div id="root" class="vh-100 d-flex flex-column" data-bs-theme="dark">
+    <div id="main-column" class="d-flex flex-column flex-grow-1">
+        <nav class="navbar navbar-expand-lg navbar-dark border-bottom border-body">
+            <!-- Left -->
+            <div class="navbar-nav tabs">
+                <button id="btn-table-tab" class="nav-link active">Score Tables</button>
+                <button id="btn-elimination-tab" class="nav-link">Elimination</button>
+                <button id="btn-wheel-tab" class="nav-link">Wheel</button>
+            </div>
+
+            <!-- Center -->
+            <div class="position-absolute start-50 translate-middle-x">
+                <select id="select-rankings" class="form-select">
+                    <option value="ranking-1">Ranking 1</option>
+                    <option value="ranking-2">Ranking 2</option>
+                </select>
+            </div>
+
+            <!-- Right -->
+            <div class="logout ms-auto d-flex align-items-center gap-3">
+                <span class="d-none d-md-flex align-items-center">
+                    <i class="bi bi-person-circle me-2 fs-4"></i>
+                    <span>Logged in as <strong class="text-success username">user</strong>.</span>
+                </span>
+                <button id="btn-logout" class="btn btn-outline-light">Log Out</button>
+            </div>
+            <div class="login ms-auto d-flex">
+                <button id="btn-login" class="btn btn-outline-light">Log In</button>
+            </div>
+        </nav>
+        <div id="tab-root" class="d-flex flex-column flex-grow-1">
+
+        </div>
+    </div>
+</div>

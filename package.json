@@ -8,6 +8,10 @@
     "dev": "esbuild src/main.ts --bundle --format=esm --loader:.css=css --loader:.html=text --outfile=dist/bundle.js --watch"
   },
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "@types/bootstrap": "^5.2.11",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
     "esbuild": "^0.28.1",
     "serve": "^14.2.6"
   }

@@ -1,3 +1,4 @@
+import { ErrorDialogComponent } from "../components/error-dialog.component";
 import { Observable } from "./observable";
 
 /**
@@ -12,4 +13,6 @@ export class App
 
     public selectedRankingId = new Observable<string | null>(null);
     public selectedTableId = new Observable<string | null>(null);
+
+    public errorDialog: ErrorDialogComponent = new ErrorDialogComponent();
 };

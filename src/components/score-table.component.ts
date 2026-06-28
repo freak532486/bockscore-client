@@ -51,26 +51,26 @@ export class ScoreTableComponent implements Component
         }
 
         /* Create header row */
+        const thead = document.createElement("thead") as HTMLElement;
         const headerRow = document.createElement("tr");
-        headerRow.appendChild(td(""));
         headerRow.appendChild(columnHeader("Game"));
         for (const member of members) {
             headerRow.appendChild(columnHeader(member.name));
         }
         headerRow.appendChild(columnHeader("Score"));
-        table.appendChild(headerRow);
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
         
         /* Fetch table data */
+        const tbody = document.createElement("tbody");
         const tableEntries = await api.fetchScoreTableRows(this.app, this.tableId);
         if (tableEntries == "error") {
             table.style.display = "none";
             return;
         }
 
-        for (let i = 0; i < tableEntries.length; i++) {
-            const entry = tableEntries[i]!;
+        for (const entry of tableEntries) {
             const row = document.createElement("tr");
-            row.appendChild(rowHeader(String(i)));
             row.appendChild(td(entry.name));
 
             let avg = 0;
@@ -82,8 +82,10 @@ export class ScoreTableComponent implements Component
             avg /= members.length;
 
             row.appendChild(td(String(avg)));
-            table.appendChild(row);
+            tbody.appendChild(row);
         }
+
+        table.appendChild(tbody);
     }
 }
 

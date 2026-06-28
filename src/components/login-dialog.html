@@ -1,0 +1,45 @@
+<div class="modal fade" id="login-dialog" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                    Log In
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form id="loginForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            Username
+                        </label>
+                        <input type="text" class="form-control" id="username" placeholder="Enter your username"
+                            autocomplete="username" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            Password
+                        </label>
+                        <input type="password" class="form-control" id="password" placeholder="Enter your password"
+                            autocomplete="current-password" required>
+                    </div>
+
+                    <div class="alert alert-danger d-none" role="alert">
+                        Invalid username or password.
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        Log In
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
