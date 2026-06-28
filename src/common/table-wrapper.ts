@@ -1,0 +1,172 @@
+import type { App } from "./app";
+import * as api from "./api"
+
+/**
+ * A wrapper around a score table. Can be modified. Every modification will automatically be sent to the API. If that
+ * call fails, the table is also not modified internally.
+ */
+export class ScoreTableWrapper
+{
+
+    private constructor(
+        private readonly app: App,
+        public readonly tableId: string,
+        public readonly header: ScoreTableHeaderWrapper,
+        private readonly _rows: Array<ScoreTableRowWrapper>,
+        private readonly userIdToMemberId: Map<string, string>
+    )
+    {}
+
+    static async loadTable(app: App, rankingId: string, tableId: string): Promise<ScoreTableWrapper | "not_found" | "error"> {
+        /* First, we fetch the header */
+        const membersRes = await api.fetchMembersForRanking(app, rankingId);
+        if (membersRes == "error") {
+            return "error";
+        }
+
+        const allTables = await api.fetchTablesForRanking(app, rankingId);
+        if (allTables == "error") {
+            return "error";
+        }
+
+        const matchingTableHeaders = allTables.filter(x => x.id == tableId);
+        if (matchingTableHeaders.length == 0) {
+            return "not_found";
+        }
+
+        const tableHeader = matchingTableHeaders[0]!;
+
+        const userIdToMemberId = new Map<string, string>();
+        for (const member of membersRes) {
+            userIdToMemberId.set(member.user.id, member.id);
+        }
+
+        const header = new ScoreTableHeaderWrapper(
+            app,
+            tableHeader?.name,
+            membersRes.map(x => ({ "id": x.user.id, "name": x.name })),
+            "average"
+        );
+
+        /* Fetch the scores */
+        const scoresRes = await api.fetchUserScores(app, membersRes.map(x => x.id));
+        if (scoresRes == "error") {
+            return "error";
+        }
+
+        const scoreMap = new Map<string, Map<string, number>>(); // entryId -> memberId -> value
+        for (const score of scoresRes) {
+            if (score.value == undefined) {
+                continue;
+            }
+
+            if (!scoreMap.has(score.entryId)) {
+                scoreMap.set(score.entryId, new Map());
+            }
+
+            scoreMap.get(score.entryId)!.set(score.memberId, score.value);
+        }
+
+        /* Fetch all table rows and create wrappers */
+        const rowsRes = await api.fetchScoreTableRows(app, tableId);
+        if (rowsRes == "error") {
+            return "error";
+        }
+
+        const rows = rowsRes.map(x => new ScoreTableRowWrapper(
+            app,
+            x.id,
+            x.name,
+            scoreMap.get(x.id) || new Map(),
+            userIdToMemberId
+        ));
+
+        /* Done */
+        return new ScoreTableWrapper(app, tableId, header, rows, userIdToMemberId);
+    }
+
+    get rows() {
+        return  [...this._rows].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    /**
+     * Adds a row to the table.
+     */
+    async addRow(name: string): Promise<boolean>
+    {
+        const res = await api.addRow(this.app, this.tableId, name);
+        if (res !== "error") {
+            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId));
+            return true;
+        }
+
+        return false;
+    }
+
+}
+
+export interface User
+{
+    id: string,
+    name: string
+}
+
+export class ScoreTableHeaderWrapper
+{
+    constructor(
+        private readonly app: App,
+        public readonly name: string,
+        private readonly _members: Array<User>,
+        public readonly scoreMode: "average" | "magic"
+    ) {}
+
+    get members() {
+        return this._members;
+    }
+}
+
+export class ScoreTableRowWrapper
+{
+    constructor(
+        private readonly app: App,
+        public readonly rowId: string,
+        private _name: string,
+        private readonly _data: Map<string, number>,
+        private readonly userToMemberId: Map<string, string>
+    ) {}
+
+    get name() {
+        return this._name;
+    }
+
+    /**
+     * Returns the score given by the given user for this row.
+     */
+    getScore(userId: string)
+    {
+        return this._data.get(userId) || 0;
+    }
+
+    /**
+     * Sets the score for the currently active user.
+     */
+    async setScore(value: number): Promise<boolean>
+    {
+        if (this.app.userId.value == null) {
+            return false;
+        }
+
+        const memberId = this.userToMemberId.get(this.app.userId.value);
+        if (memberId == undefined) {
+            return false;
+        }
+
+        const res = await api.setScore(this.app, memberId, this.rowId, value);
+        if (res == "ok") {
+            this._data.set(this.app.userId.value, value);
+            return true;
+        }
+
+        return false;
+    }
+}

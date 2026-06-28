@@ -298,3 +298,44 @@ export async function fetchUserScores(app: App, userIds: Array<string>): Promise
 
     return await response.json() as Array<UserScore>;
 }
+
+export async function setScore(app: App, memberId: string, rowId: string, value: number): Promise<"ok" | "error">
+{
+    const response = await fetch("/api/userscore", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        "body": JSON.stringify({
+            "entryId": rowId,
+            "memberId": memberId,
+            "value": value
+        })
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
+/**
+ * Either returns the UUID of the created row, or an error.
+ */
+export async function addRow(app: App, tableId: string, name: string): Promise<string | "error">
+{
+    const response = await fetch("/api/scoreTableEntry", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        "body": JSON.stringify({ "scoreTableId": tableId, "name": name })
+    });
+
+    if (!response.ok) {
+        return "error";
+    }
+
+    return (await response.json()).id as string;
+}

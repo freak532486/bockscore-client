@@ -1,12 +1,10 @@
 import template from "./root.html"
-import "./root.css"
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import type { App } from "../common/app";
 import * as api from "../common/api"
 import { LoginDialogComponent } from "./login-dialog.component";
 import { RankingsTabComponent } from "./tab-rankings.component";
-import { ErrorDialogComponent } from "./error-dialog.component";
 
 export class RootComponent implements Component
 {

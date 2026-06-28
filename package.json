@@ -4,8 +4,8 @@
   "description": "An alternative client to the bockscore app.",
   "scripts": {
     "start": "serve -l tcp://0.0.0.0:3000",
-    "build": "esbuild src/main.ts --bundle --format=esm --loader:.css=css --loader:.html=text --outfile=dist/bundle.js",
-    "dev": "esbuild src/main.ts --bundle --format=esm --loader:.css=css --loader:.html=text --outfile=dist/bundle.js --watch"
+    "build": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --outfile=dist/bundle.js",
+    "dev": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --outfile=dist/bundle.js --watch"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",

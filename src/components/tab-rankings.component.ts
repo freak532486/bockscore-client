@@ -4,6 +4,7 @@ import type { Component } from "./component";
 import template from "./tab-rankings.html"
 import * as api from "../common/api"
 import { ScoreTableComponent } from "./score-table.component";
+import { ScoreTableWrapper } from "../common/table-wrapper";
 
 export class RankingsTabComponent implements Component
 {
@@ -60,7 +61,7 @@ export class RankingsTabComponent implements Component
         updateTables();
 
         /* Create a table view whenever a table is selected */
-        const showTable = () => {
+        const showTable = async () => {
             const tableView = this.view.querySelector("#table-view") as HTMLElement;
             tableView.replaceChildren();
 
@@ -68,8 +69,15 @@ export class RankingsTabComponent implements Component
                 return;
             }
 
-            const tableComp = new ScoreTableComponent(app, app.selectedRankingId.value, app.selectedTableId.value);
-            tableView.appendChild(tableComp.view);
+            const table = await ScoreTableWrapper.loadTable(app, app.selectedRankingId.value, app.selectedTableId.value);
+            if (table == "not_found") {
+                app.errorDialog.showError("The selected table does not exist (anymore).");
+            } else if (table == "error") {
+                app.errorDialog.showError("An error occured while fetching the table.");
+            } else {
+                const tableComp = new ScoreTableComponent(app, table);
+                tableView.appendChild(tableComp.view);
+            }
         };
 
         app.selectedTableId.subscribe(() => showTable());
