@@ -1,0 +1,75 @@
+<div class="modal fade" id="row-details-dialog" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="row-details-title"></h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Scores -->
+                <table class="table table-bordered table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                    </tbody>
+                </table>
+
+                <hr>
+
+                <!-- Submit score -->
+                <h6 class="mb-3">Change your score</h6>
+
+                <div class="mb-3 d-flex flex-column gap-2 align-items-end">
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="row-score-input"
+                        placeholder="Enter score">
+                </div>
+
+                <hr>
+
+                <!-- General -->
+                <h6 class="mb-3">Change row name</h6>
+
+                <div class="mb-4 d-flex flex-column gap-2 align-items-end">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="row-name-input"
+                        placeholder="Enter row name">
+                </div>
+            </div>
+
+            <div class="modal-footer d-flex w-100 justify-content-between">
+                <button
+                    type="button"
+                    class="btn btn-danger"
+                    id="btn-delete-row">
+                    Delete Row
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="row-details-submit"
+                    >
+                    Submit
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>

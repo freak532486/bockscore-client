@@ -12,7 +12,7 @@ export class ScoreTableWrapper
         private readonly app: App,
         public readonly tableId: string,
         public readonly header: ScoreTableHeaderWrapper,
-        private readonly _rows: Array<ScoreTableRowWrapper>,
+        private _rows: Array<ScoreTableRowWrapper>,
         private readonly userIdToMemberId: Map<string, string>
     )
     {}
@@ -54,7 +54,7 @@ export class ScoreTableWrapper
             return "error";
         }
 
-        const scoreMap = new Map<string, Map<string, number>>(); // entryId -> memberId -> value
+        const scoreMap = new Map<string, Map<string, ScoreEntry>>(); // entryId -> memberId -> value
         for (const score of scoresRes) {
             if (score.value == undefined) {
                 continue;
@@ -64,7 +64,7 @@ export class ScoreTableWrapper
                 scoreMap.set(score.entryId, new Map());
             }
 
-            scoreMap.get(score.entryId)!.set(score.memberId, score.value);
+            scoreMap.get(score.entryId)!.set(score.memberId, { id: score.id, value: score.value });
         }
 
         /* Fetch all table rows and create wrappers */
@@ -103,6 +103,25 @@ export class ScoreTableWrapper
         return false;
     }
 
+    /**
+     * Deletes this row from the table.
+     */
+    async deleteRow(rowId: string): Promise<boolean>
+    {
+        const rowWrapper = this._rows.filter(x => x.rowId == rowId);
+        if (rowWrapper.length == 0) {
+            return false;
+        }
+
+        const res = await api.deleteRow(this.app, rowId);
+        if (res == "error") {
+            return false;
+        }
+
+        this._rows = this._rows.filter(x => x.rowId !== rowId);
+        return true;
+    }
+
 }
 
 export interface User
@@ -125,13 +144,19 @@ export class ScoreTableHeaderWrapper
     }
 }
 
+interface ScoreEntry
+{
+    id: string | undefined,
+    value: number
+}
+
 export class ScoreTableRowWrapper
 {
     constructor(
         private readonly app: App,
         public readonly rowId: string,
         private _name: string,
-        private readonly _data: Map<string, number>,
+        private readonly _data: Map<string, ScoreEntry>,
         private readonly userToMemberId: Map<string, string>
     ) {}
 
@@ -140,11 +165,21 @@ export class ScoreTableRowWrapper
     }
 
     /**
+     * Changes the name of this row.
+     */
+    async setName(newName: string) {
+        const res = await api.renameRow(this.app, this.rowId, newName);
+        if (res == "ok") {
+            this._name = newName;
+        }
+    }
+
+    /**
      * Returns the score given by the given user for this row.
      */
     getScore(userId: string)
     {
-        return this._data.get(userId) || 0;
+        return this._data.get(userId)?.value || 0;
     }
 
     /**
@@ -156,14 +191,19 @@ export class ScoreTableRowWrapper
             return false;
         }
 
+        
         const memberId = this.userToMemberId.get(this.app.userId.value);
         if (memberId == undefined) {
             return false;
         }
+        const oldValue = this._data.get(memberId);
+        
+        const res = oldValue == undefined || oldValue.id == undefined
+            ? await api.createScore(this.app, memberId, this.rowId, value)
+            : await api.setScore(this.app, oldValue.id, value);
 
-        const res = await api.setScore(this.app, memberId, this.rowId, value);
         if (res == "ok") {
-            this._data.set(this.app.userId.value, value);
+            this._data.set(this.app.userId.value, { "id": undefined, "value": value });
             return true;
         }
 

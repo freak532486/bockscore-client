@@ -1,4 +1,5 @@
 import { ErrorDialogComponent } from "../components/error-dialog.component";
+import { InputBlockerComponent } from "../components/input-blocker";
 import { Observable } from "./observable";
 
 /**
@@ -15,4 +16,5 @@ export class App
     public selectedTableId = new Observable<string | null>(null);
 
     public errorDialog: ErrorDialogComponent = new ErrorDialogComponent();
+    public inputBlocker: InputBlockerComponent = new InputBlockerComponent();
 };

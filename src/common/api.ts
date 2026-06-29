@@ -271,6 +271,7 @@ export async function fetchScoreTableRows(app: App, tableId: string): Promise<Ar
 
 export interface UserScore
 {
+    "id": string,
     "memberId": string,
     "entryId": string,
     "value": number | undefined
@@ -299,7 +300,7 @@ export async function fetchUserScores(app: App, userIds: Array<string>): Promise
     return await response.json() as Array<UserScore>;
 }
 
-export async function setScore(app: App, memberId: string, rowId: string, value: number): Promise<"ok" | "error">
+export async function createScore(app: App, memberId: string, rowId: string, value: number): Promise<"ok" | "error">
 {
     const response = await fetch("/api/userscore", {
         method: "POST",
@@ -311,6 +312,23 @@ export async function setScore(app: App, memberId: string, rowId: string, value:
         "body": JSON.stringify({
             "entryId": rowId,
             "memberId": memberId,
+            "value": value
+        })
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
+export async function setScore(app: App, valueId: string, value: number): Promise<"ok" | "error">
+{
+    const response = await fetch("/api/userscore/" + valueId, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        "body": JSON.stringify({
             "value": value
         })
     });
@@ -338,4 +356,33 @@ export async function addRow(app: App, tableId: string, name: string): Promise<s
     }
 
     return (await response.json()).id as string;
+}
+
+export async function deleteRow(app: App, entryId: string): Promise<"ok" | "error">
+{
+    const response = await fetch("/api/scoreTableEntry/" + entryId, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        }
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
+export async function renameRow(app: App, entryId: string, newName: string): Promise<"ok" | "error">
+{
+    const response = await fetch("/api/scoreTableEntry/" + entryId, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        "body": JSON.stringify({ "name": newName })
+    });
+
+    return response.ok ? "ok" : "error";
 }

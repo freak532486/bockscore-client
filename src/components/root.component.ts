@@ -16,6 +16,7 @@ export class RootComponent implements Component
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
 
         document.body.appendChild(app.errorDialog.view);
+        this.view.appendChild(app.inputBlocker.view);
 
         /* Add each tab to page */
         const rankingsTab = new RankingsTabComponent(app);
