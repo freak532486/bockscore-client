@@ -179,7 +179,12 @@ export class ScoreTableRowWrapper
      */
     getScore(userId: string)
     {
-        return this._data.get(userId)?.value || 0;
+        const memberId = this.userToMemberId.get(userId);
+        if (memberId == undefined) {
+            return 0;
+        }
+
+        return this._data.get(memberId)?.value || 0;
     }
 
     /**
@@ -197,13 +202,21 @@ export class ScoreTableRowWrapper
             return false;
         }
         const oldValue = this._data.get(memberId);
+
+        if (oldValue == undefined || oldValue.id == undefined) {
+            const res = await api.createScore(this.app, memberId, this.rowId, value);
+            if (res == "error") {
+                return false;
+            }
+
+            this._data.set(memberId, { "id": res, "value": value });
+            return true;
+        }
         
-        const res = oldValue == undefined || oldValue.id == undefined
-            ? await api.createScore(this.app, memberId, this.rowId, value)
-            : await api.setScore(this.app, oldValue.id, value);
+        const res = await api.setScore(this.app, oldValue.id, value);
 
         if (res == "ok") {
-            this._data.set(this.app.userId.value, { "id": undefined, "value": value });
+            this._data.set(memberId, { "id": oldValue.id, "value": value });
             return true;
         }
 

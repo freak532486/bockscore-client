@@ -300,7 +300,7 @@ export async function fetchUserScores(app: App, userIds: Array<string>): Promise
     return await response.json() as Array<UserScore>;
 }
 
-export async function createScore(app: App, memberId: string, rowId: string, value: number): Promise<"ok" | "error">
+export async function createScore(app: App, memberId: string, rowId: string, value: number): Promise<string | "error">
 {
     const response = await fetch("/api/userscore", {
         method: "POST",
@@ -316,7 +316,12 @@ export async function createScore(app: App, memberId: string, rowId: string, val
         })
     });
 
-    return response.ok ? "ok" : "error";
+    if (!response.ok) {
+        return "error";
+    }
+
+
+    return (await response.json()).id as string;
 }
 
 export async function setScore(app: App, valueId: string, value: number): Promise<"ok" | "error">
