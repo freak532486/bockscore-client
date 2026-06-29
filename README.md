@@ -58,7 +58,7 @@ overwhelming is quite difficult. We came up with this process some years ago tha
 2. Every person gets to pick one joker in the table. What this does is explained below.
 3. Calculate a final score for each game from all scores given by the players.
     * A simple score function is to simply take the average. But we want to punish the score of games for which some players have a really low score. It is better to play a game where everyone says "Meh" rather than a game where one player hates it.
-    * A better score formula is using a [generalized mean](https://en.wikipedia.org/wiki/Generalized_mean) $=\lparen \frac{1}{n} \sum_{i=0}^{n} s_i^e \rparen^\frac{1}{e}$ with $k < 0$. This penalizes games that have strongly different scores. We choose $e = -1.2$ as a pretty good exponent.
+    * A better score formula is using a [generalized mean](https://en.wikipedia.org/wiki/Generalized_mean) $\lparen \frac{1}{n} \sum_{i=0}^{n} s_i^e \rparen^\frac{1}{e}$ with $e < 0$. This penalizes games that have strongly different scores. We choose $e = -1.2$ as a pretty good exponent.
 4. Select $k$ different games from the table based on a _weighted_ random selection. Then, add all jokers of each player to the list as well.
     * Games with a score of $10$ are ten times as likely to be picked than games with a score of $1$
     * We choose $k = 40$.
