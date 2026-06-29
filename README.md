@@ -70,3 +70,5 @@ overwhelming is quite difficult. We came up with this process some years ago tha
     * Otherwise, the final remaining game is played.
 
 The entire process takes about an hour and is quite fun in itself. It reliably selects games that both random (so you can be surprised by a good game that you voted as "Meh") _and_ it feels fair for every player.
+
+The point of the website is to get rid of the big, difficult to maintain excel table and python script floating around on a USB stick and have a good webapp for the entire process.
