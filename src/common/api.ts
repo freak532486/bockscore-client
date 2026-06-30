@@ -69,6 +69,8 @@ export async function logout(app: App): Promise<"ok" | "error">
     const logout = await response.json() as LogoutResponse;
     app.authToken.value = null;
     app.userId.value = logout.newTempUserId;
+    app.selectedTableId.value = null;
+    app.selectedRankingId.value = null;
     return "ok";
 }
 

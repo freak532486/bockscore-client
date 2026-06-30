@@ -53,7 +53,7 @@ export class MobileScoreTableComponent implements Component
                     }
                 },
                 async () => {
-                    const success = await this.wrapper.deleteRow(row.rowId);
+                    const success = await this.wrapper.deleteRow(row.id);
                     if (success) {
                         this.refresh();
                     }

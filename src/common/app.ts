@@ -1,6 +1,8 @@
 import { ErrorDialogComponent } from "../components/error-dialog.component";
 import { InputBlockerComponent } from "../components/input-blocker";
+import type { ScoreTableHeader } from "./api";
 import { Observable } from "./observable";
+import type { ScoreTableWrapper } from "./table-wrapper";
 
 /**
  * The entire state of the app.
@@ -17,4 +19,6 @@ export class App
 
     public errorDialog: ErrorDialogComponent = new ErrorDialogComponent();
     public inputBlocker: InputBlockerComponent = new InputBlockerComponent();
+
+    public rankingCache: Map<string, Map<string, ScoreTableWrapper>> = new Map();
 };

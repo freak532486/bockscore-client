@@ -5,6 +5,7 @@ import type { App } from "../common/app";
 import * as api from "../common/api"
 import { LoginDialogComponent } from "./login-dialog.component";
 import { RankingsTabComponent } from "./tab-rankings.component";
+import { ScoreTableWrapper } from "../common/table-wrapper";
 
 export class RootComponent implements Component
 {
@@ -45,22 +46,56 @@ export class RootComponent implements Component
                 : selectRankings.value;
 
         const updateRankings = async () => {
-            const response = await api.fetchAllRankings(app);
-            if (response == "error") {
-                app.errorDialog.showError("An error occured while fetching available rankings.");
-                return
-            }
+            app.inputBlocker.runWithBlockedInput(async () => {
+                const response = await api.fetchAllRankings(app);
+                if (response == "error") {
+                    app.errorDialog.showError("An error occured while fetching available rankings.");
+                    return;
+                }
 
-            selectRankings.replaceChildren();
+                /* Update rankings selector and read tables into cache */
+                selectRankings.replaceChildren();
+                selectRankings.classList.toggle("d-none", response.length == 0);
+                for (const ranking of response) {
+                    /* Create selector entry */
+                    const option = document.createElement("option");
+                    option.value = ranking.id;
+                    option.textContent = ranking.name;
+                    selectRankings.appendChild(option);
 
-            for (const ranking of response) {
-                const option = document.createElement("option");
-                option.value = ranking.id;
-                option.textContent = ranking.name;
-                selectRankings.appendChild(option);
-            }
+                    /* Write tables into cache if they dont exist. */
+                    if (!app.rankingCache.has(ranking.id)) {
+                        app.rankingCache.set(ranking.id, new Map());
+                    }
 
-            selectRankings.dispatchEvent(new Event("change", { "bubbles": true }));
+                    const allTables = await api.fetchTablesForRanking(app, ranking.id);
+                    if (allTables == "error") {
+                        continue;
+                    }
+
+                    const rankingCache = app.rankingCache.get(ranking.id)!;
+                    for (const table of allTables) {
+                        if (rankingCache.has(table.id)) {
+                            continue;
+                        }
+
+                        const wrapper = await ScoreTableWrapper.loadTable(app, ranking.id, table.id);
+                        if (wrapper == "error" || wrapper == "not_found") {
+                            continue;
+                        }
+                        rankingCache.set(table.id, wrapper);
+                    }
+
+                    /* Remove tables from cache that don't exist */
+                    for (const tableId of rankingCache.keys()) {
+                        if (allTables.filter(x => x.id == tableId).length == 0) {
+                           rankingCache.delete(tableId);
+                        }
+                    }
+                }
+
+                selectRankings.dispatchEvent(new Event("change", { "bubbles": true }));
+            });
         }
 
         app.authToken.subscribe(() => updateRankings());

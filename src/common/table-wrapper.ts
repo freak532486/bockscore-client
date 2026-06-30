@@ -10,7 +10,7 @@ export class ScoreTableWrapper
 
     private constructor(
         private readonly app: App,
-        public readonly tableId: string,
+        public readonly id: string,
         public readonly header: ScoreTableHeaderWrapper,
         private _rows: Array<ScoreTableRowWrapper>,
         private readonly userIdToMemberId: Map<string, string>
@@ -94,7 +94,7 @@ export class ScoreTableWrapper
      */
     async addRow(name: string): Promise<boolean>
     {
-        const res = await api.addRow(this.app, this.tableId, name);
+        const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
             this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId));
             return true;
@@ -108,7 +108,7 @@ export class ScoreTableWrapper
      */
     async deleteRow(rowId: string): Promise<boolean>
     {
-        const rowWrapper = this._rows.filter(x => x.rowId == rowId);
+        const rowWrapper = this._rows.filter(x => x.id == rowId);
         if (rowWrapper.length == 0) {
             return false;
         }
@@ -118,7 +118,7 @@ export class ScoreTableWrapper
             return false;
         }
 
-        this._rows = this._rows.filter(x => x.rowId !== rowId);
+        this._rows = this._rows.filter(x => x.id !== rowId);
         return true;
     }
 
@@ -154,7 +154,7 @@ export class ScoreTableRowWrapper
 {
     constructor(
         private readonly app: App,
-        public readonly rowId: string,
+        public readonly id: string,
         private _name: string,
         private readonly _data: Map<string, ScoreEntry>,
         private readonly userToMemberId: Map<string, string>
@@ -168,7 +168,7 @@ export class ScoreTableRowWrapper
      * Changes the name of this row.
      */
     async setName(newName: string) {
-        const res = await api.renameRow(this.app, this.rowId, newName);
+        const res = await api.renameRow(this.app, this.id, newName);
         if (res == "ok") {
             this._name = newName;
         }
@@ -204,7 +204,7 @@ export class ScoreTableRowWrapper
         const oldValue = this._data.get(memberId);
 
         if (oldValue == undefined || oldValue.id == undefined) {
-            const res = await api.createScore(this.app, memberId, this.rowId, value);
+            const res = await api.createScore(this.app, memberId, this.id, value);
             if (res == "error") {
                 return false;
             }

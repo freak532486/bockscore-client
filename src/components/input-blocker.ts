@@ -21,4 +21,13 @@ export class InputBlockerComponent implements Component
         this.view.classList.toggle("active", enabled);
         this.view.classList.remove("show-feedback");
     }
+
+    runWithBlockedInput(runnable: () => void) {
+        try {
+            this.setEnabled(true);
+            runnable();
+        } finally {
+            this.setEnabled(false);
+        }
+    }
 }
