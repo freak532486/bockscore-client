@@ -3,7 +3,7 @@ import "./tab-elimination-card.css"
 import type { Component } from "./component"
 import { htmlToElement } from "../common/utils";
 
-const TIME_UNTIL_DELETION_MS = 2000; // Keep in sync with CSS
+const TIME_UNTIL_DELETION_MS = 1000; // Keep in sync with CSS
 
 export class TabEliminationCardComponent implements Component
 {
