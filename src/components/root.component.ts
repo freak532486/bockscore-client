@@ -6,6 +6,8 @@ import * as api from "../common/api"
 import { LoginDialogComponent } from "./login-dialog.component";
 import { RankingsTabComponent } from "./tab-rankings.component";
 import { ScoreTableWrapper } from "../common/table-wrapper";
+import { EliminationTabComponent } from "./tab-elimination.component";
+import { WheelTabComponent } from "./tab-wheel";
 
 export class RootComponent implements Component
 {
@@ -20,8 +22,19 @@ export class RootComponent implements Component
         this.view.appendChild(app.inputBlocker.view);
 
         /* Add each tab to page */
-        const rankingsTab = new RankingsTabComponent(app);
-        tabRoot.appendChild(rankingsTab.view);
+        const tabs: Array<Component> = [
+            new RankingsTabComponent(app),
+            new EliminationTabComponent(app),
+            new WheelTabComponent(app)
+        ];
+
+        tabs.forEach(x => {
+            tabRoot.appendChild(x.view);
+            x.view.classList.add("d-none");
+        });
+
+        tabs[0]!.view.classList.remove("d-none"); // Initial tab is rankings tab.
+
 
         /* Make tabs switchable */
         const tabButtons = [...this.view.querySelectorAll(".tabs .nav-link")] as Array<HTMLButtonElement>;
@@ -34,7 +47,9 @@ export class RootComponent implements Component
 
                 button.classList.add("active");
 
-                rankingsTab.view.classList.toggle("d-none", i !== 0);
+                for (let j = 0; j < tabButtons.length; j++) {
+                    tabs[j]!.view.classList.toggle("d-none", i !== j);
+                }
             }
         }
 

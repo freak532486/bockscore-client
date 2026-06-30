@@ -1,0 +1,19 @@
+.game-card {
+    cursor: pointer;
+    user-select: none;
+}
+
+.game-card .hold-progress {
+    position: absolute;
+    inset: 0;
+
+    transform: scaleX(0);
+    transform-origin: left center;
+
+    pointer-events: none;
+}
+
+.game-card .hold-progress.filling {
+    transition: transform 2s linear;
+    transform: scaleX(1);
+}
