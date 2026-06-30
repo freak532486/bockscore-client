@@ -10,6 +10,8 @@ export class EliminationTabComponent implements Component
     public readonly view: HTMLElement;
     private readonly importDialog = new EliminationImportDialog();
 
+    private originalNumEntries: number = 0;
+
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         document.body.appendChild(this.importDialog.view);
@@ -34,13 +36,15 @@ export class EliminationTabComponent implements Component
         }
 
         for (const table of tableMap.values()) {
-            const entries = new Map<string, number>();
+            const entries = [];
             for (const row of table.rows) {
-                entries.set(row.name, settings.weightedImport ? row.getAvgScore("MEAN") : 1);
+                entries.push({
+                    "name": row.name,
+                    "score": settings.weightedImport ? row.getAvgScore("MEAN") : 1
+                });
             }
 
             const selection = weightedRandomSelection(entries, settings.entriesPerTable);
-            console.log(settings.entriesPerTable + ", " + selection.length);
             result.push(...selection);
         }
 
@@ -51,27 +55,49 @@ export class EliminationTabComponent implements Component
         const games = this.view.querySelector(".games") as HTMLElement;
         games.replaceChildren();
 
+        const spanRemaining = this.view.querySelector("#span-remaining") as HTMLElement;
+        const spanCurrent = this.view.querySelector("#num-current") as HTMLElement;
+        const spanTotal = this.view.querySelector("#num-total") as HTMLElement;
+
         for (const entry of result) {
-            games.appendChild(new TabEliminationCardComponent(entry, () => {}).view);
+            games.appendChild(new TabEliminationCardComponent(entry, () => {
+                const numCurrent = games.children.length;
+                spanCurrent.textContent = String(numCurrent);
+                spanRemaining.classList.toggle("text-danger", numCurrent > this.originalNumEntries / 2);
+                spanRemaining.classList.toggle("text-success", numCurrent <= this.originalNumEntries / 2);
+            }).view);
         }
+
+        spanRemaining.classList.remove("invisible");
+        spanRemaining.classList.toggle("text-danger", true);
+        this.originalNumEntries = result.length;
+        spanCurrent.textContent = String(this.originalNumEntries);
+        spanTotal.textContent = String(this.originalNumEntries);
+
     }
 }
 
-function weightedRandomSelection(entries: Map<string, number>, n: number): Array<string>
+interface Entry
 {
-    const pool = [...entries.entries()];
+    name: string,
+    score: number
+}
+
+function weightedRandomSelection(entries: Array<Entry>, n: number): Array<string>
+{
+    const pool = [...entries];
     const result: string[] = [];
 
     n = Math.min(n, pool.length);
 
     for (let i = 0; i < n; i++) {
-        
-        const totalWeight = pool.map(x => x[1]).reduce((a, b) => a + b, 0);
+        const totalWeight = pool.map(x => x.score).reduce((a, b) => a + b, 0);
 
         let r = Math.random() * totalWeight;
 
         for (let j = 0; j < pool.length; j++) {
-            const [key, weight] = pool[j]!;
+            const key = pool[j]!.name;
+            const weight = pool[j]!.score;
 
             if (r < weight) {
                 result.push(key);

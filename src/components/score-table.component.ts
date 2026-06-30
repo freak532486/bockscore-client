@@ -34,10 +34,8 @@ export class ScoreTableComponent implements Component
         const headerRow = document.createElement("tr");
         headerRow.appendChild(th("Game"));
         for (const member of this.wrapper.header.members) {
-            console.log("member: " + member.id + "(" + member.name + ")");
             headerRow.appendChild(th(member.name));
         }
-        console.log("active user: " + this.app.userId.value);
         
         headerRow.appendChild(th("Score"));
         thead.appendChild(headerRow);
