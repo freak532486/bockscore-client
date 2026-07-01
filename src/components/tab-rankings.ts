@@ -2,8 +2,8 @@ import type { App } from "../common/app";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import template from "./tab-rankings.html"
-import { MobileScoreTableComponent } from "./score-table.mobile.component";
-import { RowDetailsDialog } from "../row-details.mobile.component";
+import { MobileScoreTableComponent } from "./score-table.mobile";
+import { RowDetailsDialog } from "./row-details.mobile";
 
 export class RankingsTabComponent implements Component
 {
