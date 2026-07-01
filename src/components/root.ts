@@ -3,10 +3,10 @@ import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import type { App } from "../common/app";
 import * as api from "../common/api"
-import { LoginDialogComponent } from "./login-dialog.component";
-import { RankingsTabComponent } from "./tab-rankings.component";
+import { LoginDialogComponent } from "./login-dialog";
+import { RankingsTabComponent } from "./tab-rankings";
 import { ScoreTableWrapper } from "../common/table-wrapper";
-import { EliminationTabComponent } from "./tab-elimination.component";
+import { EliminationTabComponent } from "./tab-elimination";
 import { WheelTabComponent } from "./tab-wheel";
 
 export class RootComponent implements Component

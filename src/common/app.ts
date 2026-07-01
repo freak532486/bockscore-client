@@ -1,6 +1,5 @@
-import { ErrorDialogComponent } from "../components/error-dialog.component";
+import { ErrorDialogComponent } from "../components/error-dialog";
 import { InputBlockerComponent } from "../components/input-blocker";
-import type { ScoreTableHeader } from "./api";
 import { Observable } from "./observable";
 import type { ScoreTableWrapper } from "./table-wrapper";
 

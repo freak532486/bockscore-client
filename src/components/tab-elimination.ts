@@ -2,8 +2,8 @@ import template from "./tab-elimination.html"
 import type { App } from "../common/app";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import { TabEliminationCardComponent } from "./tab-elimination-card.component";
-import { EliminationImportDialog, type EliminationImportSettings } from "./elimination-import-dialog.component";
+import { TabEliminationCardComponent } from "./tab-elimination-card";
+import { EliminationImportDialog, type EliminationImportSettings } from "./elimination-import-dialog";
 
 export class EliminationTabComponent implements Component
 {

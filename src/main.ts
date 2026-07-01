@@ -1,6 +1,6 @@
 import { App } from "./common/app";
 import * as api from "./common/api"
-import { RootComponent } from "./components/root.component";
+import { RootComponent } from "./components/root";
 import "bootstrap"
 import "bootstrap-icons/font/bootstrap-icons.css"
 import "bootstrap/dist/css/bootstrap.min.css"
