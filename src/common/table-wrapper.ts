@@ -1,6 +1,8 @@
 import type { App } from "./app";
 import * as api from "./api"
 
+const DEFAULT_SCORE = 5;
+
 /**
  * A wrapper around a score table. Can be modified. Every modification will automatically be sent to the API. If that
  * call fails, the table is also not modified internally.
@@ -181,10 +183,23 @@ export class ScoreTableRowWrapper
     {
         const memberId = this.userToMemberId.get(userId);
         if (memberId == undefined) {
-            return 0;
+            return DEFAULT_SCORE;
         }
 
-        return this._data.get(memberId)?.value || 0;
+        return this._data.get(memberId)?.value || DEFAULT_SCORE;
+    }
+
+    getAvgScore(type: "MEAN" | "MAGIC")
+    {
+        const scores = [...this._data.values()].map(x => x.value);
+        if (scores.length == 0) {
+            return DEFAULT_SCORE;
+        }
+
+        switch (type) {
+            case "MEAN": return avg(scores);
+            case "MAGIC": return magicMean(scores);
+        }
     }
 
     /**
@@ -222,4 +237,20 @@ export class ScoreTableRowWrapper
 
         return false;
     }
+}
+
+function avg(arr: Array<number>)
+{
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function magicMean(arr: Array<number>) {
+    const e = -1.2;
+
+    let sum = 0;
+    for (const s of arr) {
+        sum += s ** e;
+    }
+
+    return sum ** (1 / e);
 }

@@ -1,45 +1,48 @@
 <div id="root" class="vh-100 d-flex flex-column">
+    <div class="text-light bg-dark" data-bs-theme="dark">
+        <div class="container">
+            <nav class="navbar navbar-dark navbar-expand-lg">
+                <!-- Left -->
+                <div class="">
+                    <select id="select-rankings" class="form-select">
+                        <option value="ranking-1">Ranking 1</option>
+                        <option value="ranking-2">Ranking 2</option>
+                    </select>
+                </div>
+
+                <button
+                    class="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#navbarContent">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <!-- Center -->
+                    <div class="navbar-nav tabs">
+                        <button id="btn-table-tab" class="nav-link active">Score Tables</button>
+                        <button id="btn-elimination-tab" class="nav-link">Elimination</button>
+                        <button id="btn-wheel-tab" class="nav-link">Wheel</button>
+                    </div>
+
+                    <!-- Right -->
+                    <div class="logout d-flex flex-column flex-lg-row align-items-center align-items-lg-center justify-content-center justify-content-lg-end
+                gap-3 ms-lg-auto mt-3 mt-lg-0">
+                        <span class="d-none d-md-flex align-items-center">
+                            <span>Logged in as <strong class="text-success username">user</strong>.</span>
+                        </span>
+                        <button id="btn-logout" class="btn btn-danger">Log Out</button>
+                    </div>
+                    <div class="login ms-auto d-flex">
+                        <button id="btn-login" class="btn btn-primary">Log In</button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </div>
     <div id="main-column" class="container py-2 d-flex flex-column flex-grow-1">
-        <nav class="navbar navbar-expand-lg border-body border-bottom mb-3">
-            <!-- Left -->
-             <div class="">
-                <select id="select-rankings" class="form-select">
-                    <option value="ranking-1">Ranking 1</option>
-                    <option value="ranking-2">Ranking 2</option>
-                </select>
-            </div>
-
-            <button
-                class="navbar-toggler"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarContent">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarContent">
-                <!-- Center -->
-                <div class="navbar-nav tabs">
-                    <button id="btn-table-tab" class="nav-link active">Score Tables</button>
-                    <button id="btn-elimination-tab" class="nav-link">Elimination</button>
-                    <button id="btn-wheel-tab" class="nav-link">Wheel</button>
-                </div>
-
-                <!-- Right -->
-                <div class="logout d-flex flex-column flex-lg-row align-items-center align-items-lg-center justify-content-center justify-content-lg-end
-            gap-3 ms-lg-auto mt-3 mt-lg-0">
-                    <span class="d-none d-md-flex align-items-center">
-                        <span>Logged in as <strong class="text-success username">user</strong>.</span>
-                    </span>
-                    <button id="btn-logout" class="btn btn-outline-danger">Log Out</button>
-                </div>
-                <div class="login ms-auto d-flex">
-                    <button id="btn-login" class="btn btn-outline">Log In</button>
-                </div>
-            </div>
-        </nav>
         <div id="tab-root" class="d-flex flex-column flex-grow-1">
-
         </div>
     </div>
 </div>
