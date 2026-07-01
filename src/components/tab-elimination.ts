@@ -11,10 +11,13 @@ export class EliminationTabComponent implements Component
     private readonly importDialog = new EliminationImportDialog();
 
     private originalNumEntries: number = 0;
+    private _entries: Array<string>;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         document.body.appendChild(this.importDialog.view);
+
+        this._entries = [];
 
         /* Make import button work */
         const btnImport = this.view.querySelector("#btn-elimination-import") as HTMLButtonElement;
@@ -61,19 +64,27 @@ export class EliminationTabComponent implements Component
 
         for (const entry of result) {
             games.appendChild(new TabEliminationCardComponent(entry, () => {
+                /* Update remaining view */
                 const numCurrent = games.children.length;
                 spanCurrent.textContent = String(numCurrent);
                 spanRemaining.classList.toggle("text-danger", numCurrent > this.originalNumEntries / 2);
                 spanRemaining.classList.toggle("text-success", numCurrent <= this.originalNumEntries / 2);
+
+                /* Update state */
+                this._entries.splice(this._entries.findIndex(x => x == entry), 1);
             }).view);
         }
 
         spanRemaining.classList.remove("invisible");
         spanRemaining.classList.toggle("text-danger", true);
+        this._entries = result;
         this.originalNumEntries = result.length;
         spanCurrent.textContent = String(this.originalNumEntries);
         spanTotal.textContent = String(this.originalNumEntries);
+    }
 
+    get entries() {
+        return this._entries;
     }
 }
 

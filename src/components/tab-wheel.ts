@@ -64,5 +64,12 @@ export class WheelTabComponent implements Component
             const entries = textarea.value.split("\n").map(x => x.trim()).filter(x => x != "");
             wheel.entries = entries;
         }
+
+        /* Make import button work */
+        const btnImport = this.view.querySelector("#btn-wheel-import") as HTMLButtonElement;
+        btnImport.onclick = () => {
+            wheel.entries = app.tabElimination.entries;
+            textarea.value = wheel.entries.join("\n");
+        }
     }
 }

@@ -6,6 +6,8 @@ import "./wheel.css"
 const CANVAS_WIDTH = 1000;
 const CANVAS_HEIGHT = 1000;
 
+const WHEEL_COLOR_DISABLED = "#222222";
+
 const WHEEL_COLORS = [
     "#bc2424",
     "#003cff",
@@ -88,7 +90,11 @@ export class WheelComponent implements Component
 
     public spin(onWin: (entry: string) => void)
     {
-       this.stopTimeout();
+        this.stopTimeout();
+
+        if (this._entries.length == 0) {
+            return;
+        }
 
         const slicePerEntry = 2 * Math.PI / this.entries.length;
         const targetAngle = Math.random() * 2 * Math.PI;
@@ -140,8 +146,13 @@ export class WheelComponent implements Component
         const cx = CANVAS_WIDTH / 2;
         const cy = CANVAS_HEIGHT / 2;
         const radius = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) * 0.45;
-
         const sliceAngle = (Math.PI * 2) / entries.length;
+
+        const fontSize = calculateFontSize(
+            ctx,
+            entries,
+            radius
+        );
 
         /* Clear canvas */
         ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -190,7 +201,7 @@ export class WheelComponent implements Component
             ctx.textAlign = "right";
             ctx.textBaseline = "middle";
             ctx.fillStyle = WHEEL_TEXT_COLORS[i % WHEEL_TEXT_COLORS.length]!;
-            ctx.font = "24px sans-serif";
+            ctx.font = "${fontSize}px sans-serif";
 
             // Position the text roughly 75% of the way out.
             ctx.fillText(truncated(label), radius - 20, 0);
@@ -198,6 +209,17 @@ export class WheelComponent implements Component
             ctx.restore();
             i += 1;
         });
+
+        /* Draw in gray if no entries */
+        if (entries.length == 0) {
+            ctx.fillStyle = WHEEL_COLOR_DISABLED;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         // Centre hub.
         ctx.restore();
@@ -232,6 +254,43 @@ export class WheelComponent implements Component
         }
         return Math.floor(angle / slice);
     }
+}
+
+function calculateFontSize(
+    ctx: CanvasRenderingContext2D,
+    entries: string[],
+    radius: number
+): number {
+    if (entries.length === 0) {
+        return 24;
+    }
+
+    const longest = entries.reduce(
+        (a, b) => truncated(a).length >= truncated(b).length ? a : b
+    );
+
+    const text = truncated(longest);
+    const maxWidth = radius * 0.7;
+    const maxHeight = 0.6 * (2 * radius * Math.PI) / entries.length;
+
+    let low = 8;
+    let high = 128;
+
+    while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+
+        ctx.font = `${mid}px sans-serif`;
+
+        const measurements = ctx.measureText(text);
+        const height = measurements.fontBoundingBoxAscent + measurements.fontBoundingBoxDescent;
+        if (measurements.width <= maxWidth && height <= maxHeight) {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    return low;
 }
 
 

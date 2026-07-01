@@ -24,7 +24,7 @@ export class RootComponent implements Component
         /* Add each tab to page */
         const tabs: Array<Component> = [
             new RankingsTabComponent(app),
-            new EliminationTabComponent(app),
+            app.tabElimination,
             new WheelTabComponent(app)
         ];
 
