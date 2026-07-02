@@ -5,10 +5,7 @@ import type { App } from "../common/app";
 import * as api from "../common/api"
 import { LoginDialogComponent } from "./login-dialog";
 import { RankingsTabComponent } from "./tab-rankings";
-import { ScoreTableWrapper } from "../common/table-wrapper";
-import { EliminationTabComponent } from "./tab-elimination";
 import { WheelTabComponent } from "./tab-wheel";
-import { Modal } from "bootstrap";
 import { InputDialog } from "./input-dialog";
 
 const INPUT_RANKING_NAME_ID = "input-ranking-name";
@@ -21,6 +18,12 @@ export class RootComponent implements Component
     {
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
+
+        /* Apply theme from local storage */
+        const storedTheme = window.localStorage.getItem("theme");
+        if (storedTheme == "light" || storedTheme == "dark") {
+            this.setTheme(storedTheme);
+        }
 
         /* Create and setup dialog for adding ranking */
         const addRankingDialog = new InputDialog("Add Ranking");
@@ -155,5 +158,37 @@ export class RootComponent implements Component
         const usernameUpdate = () => usernameSpan.textContent = app.username.value || "undefined";
         app.username.subscribe(() => usernameUpdate());
         usernameUpdate();
+
+        /* Dark mode toggle */
+        const btnDesktop = this.view.querySelector("#btn-theme-desktop") as HTMLButtonElement;
+        const btnMobile = this.view.querySelector("#btn-theme-mobile") as HTMLButtonElement;
+
+        btnDesktop.onclick = () => this.toggleDarkMode();
+        btnMobile.onclick = () => this.toggleDarkMode();
+    }
+
+    private toggleDarkMode()
+    {
+        const curMode = document.documentElement.getAttribute("data-bs-theme");
+        const newMode = curMode == "light" ? "dark" : "light";
+
+        this.setTheme(newMode);
+    }
+
+    private setTheme(theme: "light" | "dark")
+    {
+        const btnDesktop = this.view.querySelector("#btn-theme-desktop") as HTMLButtonElement;
+        const btnMobile = this.view.querySelector("#btn-theme-mobile") as HTMLButtonElement;
+
+        document.documentElement.setAttribute("data-bs-theme", theme);
+
+        for (const btn of [btnDesktop, btnMobile]) {
+            const icon = btn.querySelector("i") as HTMLElement;
+            icon.classList.toggle("bi-sun-fill", theme == "light");
+            icon.classList.toggle("bi-moon-fill", theme == "dark");
+        }
+
+        /* Store in browser storage */
+        window.localStorage.setItem("theme", theme);
     }
 }
