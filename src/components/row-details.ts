@@ -1,6 +1,6 @@
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./row-details.mobile.html"
+import template from "./row-details.html"
 import * as bootstrap from "bootstrap"
 
 export class RowDetailsDialog implements Component

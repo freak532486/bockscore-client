@@ -1,0 +1,8 @@
+.card-clickable {
+    cursor: pointer;
+    transition: border .15s ease, background .15s ease;
+}
+
+.card-clickable:hover {
+    background-color: var(--bs-secondary-bg);
+}

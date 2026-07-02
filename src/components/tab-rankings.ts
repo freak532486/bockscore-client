@@ -3,8 +3,8 @@ import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import template from "./tab-rankings.html"
 import templateTableSettingsDialog from "./tab-rankings.table-settings-dialog.html"
-import { MobileScoreTableComponent } from "./score-table.mobile";
-import { RowDetailsDialog } from "./row-details.mobile";
+import { MobileScoreTableComponent } from "./score-table";
+import { RowDetailsDialog } from "./row-details";
 import { Modal } from "bootstrap";
 import { InputDialog } from "./input-dialog";
 import * as api from "../common/api"

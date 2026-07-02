@@ -1,158 +1,84 @@
 import template from "./score-table.html"
-import "./score-table.css"
-import type { Component } from "./component"
-import { htmlToElement } from "../common/utils"
+import entry from "./score-table.entry.html"
 import type { App } from "../common/app";
-import * as api from "../common/api"
-import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
+import type { ScoreTableWrapper } from "../common/table-wrapper";
+import { htmlToElement } from "../common/utils";
+import type { Component } from "./component";
+import { RowDetailsDialog } from "./row-details";
+import "./score-table.entry.css"
 
-const ROW_HEIGHT = "20px";
 
-export class ScoreTableComponent implements Component
+export class MobileScoreTableComponent implements Component
 {
-    public readonly view;
+    public readonly view: HTMLElement;
 
     constructor(
         private readonly app: App,
-        private readonly wrapper: ScoreTableWrapper
-    ) {
-        this.view = htmlToElement(template);
-        this.refresh();
-    }
-
-    /**
-     * Refreshes the table content.
-     */
-    public async refresh()
-    {
-        /* Rebuild table from scratch */
-        const table = this.view.querySelector("table") as HTMLTableElement;
-        table.replaceChildren();
-
-        /* Create header row */
-        const thead = document.createElement("thead") as HTMLElement;
-        const headerRow = document.createElement("tr");
-        headerRow.appendChild(th("Game"));
-        for (const member of this.wrapper.header.members) {
-            headerRow.appendChild(th(member.name));
-        }
-        
-        headerRow.appendChild(th("Score"));
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-        
-        /* Fetch table data */
-        const tbody = document.createElement("tbody");
-        for (const entry of this.wrapper.rows) {
-            const row = document.createElement("tr");
-            row.style.height = ROW_HEIGHT;
-            row.appendChild(td(entry.name));
-
-            let avg = 0;
-            for (const member of this.wrapper.header.members) {
-                const score = entry.getScore(member.id);
-                avg += score;
-                const cell = td(String(score))
-                row.appendChild(cell);
-
-                if (member.id == this.app.userId.value) {
-                    this.makeEditable(cell, async str => {
-                        const newScore = getScoreOrNull(str);
-                        if (newScore !== null && newScore !== score) {
-                            await entry.setScore(newScore);
-                            await this.refresh();
-                            return;
-                        }
-
-                        cell.replaceChildren(document.createTextNode(String(score)));
-                    });
-                }
-            }
-            avg /= this.wrapper.header.members.length;
-
-            row.appendChild(td(String(avg)));
-            tbody.appendChild(row);
-        }
-
-        /* Add final row for adding rows */
-        const addRowRow = document.createElement("tr");
-        const addRowCell = document.createElement("td");
-        const addRowButton = document.createElement("button");
-        addRowButton.textContent = "Add column";
-        addRowButton.classList = "btn btn-sm w-100 py-2 btn-primary";
-        addRowCell.colSpan = this.wrapper.header.members.length + 2;
-        addRowCell.classList = "text-center p-0";
-        addRowButton.onclick = async () => {
-            const success = await this.wrapper.addRow("New Row");
-            if (success) {
-                await this.refresh();
-            }
-        }
-
-        addRowCell.appendChild(addRowButton);
-        addRowRow.appendChild(addRowCell);
-        tbody.appendChild(addRowRow);
-        table.appendChild(tbody);
-    }
-
-    private makeEditable(
-        td: HTMLTableCellElement,
-        onSubmit: (str: string) => void
+        private readonly wrapper: ScoreTableWrapper,
+        private readonly detailDialog: RowDetailsDialog
     )
     {
-        td.classList.add("editable");
+        this.view = htmlToElement(template);
+        this.refresh();
 
-        td.onclick = () => {
-            if (td.classList.contains("editing")) {
-                return;
+        /* Implement add row */
+        const btnAddRow = this.view.querySelector("#btn-add-row") as HTMLButtonElement;
+        btnAddRow.onclick = async () => {
+            if (await wrapper.addRow("New Row")) {
+                this.refresh();
             }
-
-            td.classList.add("editing");
-            const input = document.createElement("input");
-            input.classList = "cell-input";
-            input.style.width = "100%";
-            input.style.height = "100%";
-            input.type = "text";
-            td.replaceChildren(input);
-            input.focus();
-            const submitInput = async () => {
-                td.classList.remove("editing");
-                onSubmit(input.value);
-            }
-            input.onkeyup = ev => {
-                if (ev.key == "Enter") {
-                    submitInput();
-                }
-            }
-
-            input.onblur = () => submitInput();
         }
     }
-}
 
-function th(content: string): HTMLTableCellElement
-{
-    const th = document.createElement("th");
-    th.textContent = content;
-    th.scope = "column";
-    return th;
-}
+    public async refresh() {
+        this.app.inputBlocker.setEnabled(true);
+        const group = this.view.querySelector("#div-entries") as HTMLElement;
+        group.replaceChildren();
 
-function td(content: string): HTMLTableCellElement
-{
-    const td = document.createElement("td");
-    td.textContent = content;
-    return td;
-}
+        const members = this.wrapper.header.members;
 
-/**
- * Returns the score as a number _if_ given string is a valid score.
- */
-function getScoreOrNull(str: string) : number | null {
-    const num = Number(str);
-    if (!Number.isInteger(num)) {
-        return null;
+        for (const row of this.wrapper.rows) {
+            const scores = new Map<string, number>();
+            for (const member of members) {
+                scores.set(member.name, row.getScore(member.id));
+            }
+
+            const entry = this.createEntry(
+                row.name,
+                scores,
+                async (newScore, newRowname) => {
+                    const scoreChanged = newScore == undefined ? false : await row.setScore(newScore);
+                    const nameChanged = newRowname == undefined ? false : await row.setName(newRowname);
+                    if (scoreChanged || nameChanged) {
+                        this.refresh();
+                    }
+                },
+                async () => {
+                    const success = await this.wrapper.deleteRow(row.id);
+                    if (success) {
+                        this.refresh();
+                    }
+                }
+            );
+            group.appendChild(entry);
+        }
+
+        this.app.inputBlocker.setEnabled(false);
     }
 
-    return num >= 0 && num <= 10 ? num : null;
+    private createEntry(
+        name: string,
+        scores: Map<string, number>,
+        changeScore: (score: number | undefined, name: string | undefined) => void,
+        deleteRow: () => void
+    ): HTMLElement
+    {
+        const avgScore = [...scores.values()].reduce((a, b) => a + b, 0) / scores.size;
+
+        const elem = htmlToElement(entry);
+        (elem.querySelector(".name") as HTMLElement).textContent = name;
+        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(avgScore);
+        elem.onclick = () => this.detailDialog.show(name, scores, changeScore, deleteRow);
+        return elem;
+    }
 }

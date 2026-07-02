@@ -24,7 +24,7 @@ export class EliminationTabComponent implements Component
         btnImport.onclick = () => this.importDialog.show(settings => this.performImport(settings));
     }
 
-    private performImport(settings: EliminationImportSettings)
+    private async performImport(settings: EliminationImportSettings)
     {
         /* Perform the random selection */
         const result: Array<string> = [];
@@ -33,12 +33,14 @@ export class EliminationTabComponent implements Component
             return;
         }
 
-        const tableMap = this.app.rankingCache.get(this.app.selectedRankingId.value);
-        if (tableMap == undefined) {
-            return;
-        }
+        const tableIds = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
 
-        for (const table of tableMap.values()) {
+        for (const tableId of tableIds) {
+            const table = await this.app.rankingAccess.getTable(tableId);
+            if (table == "error") {
+                continue;
+            }
+            
             const entries = [];
             for (const row of table.rows) {
                 entries.push({

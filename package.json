@@ -5,7 +5,8 @@
   "scripts": {
     "start": "serve -l tcp://0.0.0.0:3000",
     "build": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js",
-    "dev": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js --watch"
+    "dev": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js --watch",
+    "check": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
@@ -13,6 +14,7 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "esbuild": "^0.28.1",
-    "serve": "^14.2.6"
+    "serve": "^14.2.6",
+    "typescript": "^6.0.3"
   }
 }
