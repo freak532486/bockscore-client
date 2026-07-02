@@ -22,10 +22,10 @@ export class InputBlockerComponent implements Component
         this.view.classList.remove("show-feedback");
     }
 
-    runWithBlockedInput(runnable: () => void) {
+    runWithBlockedInput<T>(runnable: () => T): T {
         try {
             this.setEnabled(true);
-            runnable();
+            return runnable();
         } finally {
             this.setEnabled(false);
         }

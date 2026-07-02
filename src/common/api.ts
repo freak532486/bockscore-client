@@ -129,6 +129,28 @@ export async function fetchAllRankings(app: App): Promise<Array<RankingResponse>
 }
 
 /**
+ * Creates a new ranking. Returns the ranking id, or error.
+ */
+export async function addRanking(app: App, name: string): Promise<string | "error">
+{
+    const response = await fetch("/api/ranking", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify({ "name": name })
+    });
+
+    if (!response.ok) {
+        return "error";
+    }
+
+    return (await response.json()).id;
+}
+
+/**
  * Retrieves an CSRF cookie from the server.
  */
 export async function updateXsrfToken(app: App): Promise<"ok" | "error">
@@ -186,11 +208,13 @@ async function updateUserInfo(app: App): Promise<"ok" | "error">
     return "ok";
 }
 
+export type ScoringType = "Average" | "Magic";
+
 export interface ScoreTableHeader
 {
     "id": string,
     "name": string,
-    "scoring": string
+    "scoring": ScoringType
 }
 
 /**
@@ -212,6 +236,61 @@ export async function fetchTablesForRanking(app: App, rankingId: string): Promis
     }
 
     return await response.json() as Array<ScoreTableHeader>;
+}
+
+/**
+ * Creates a table for a ranking and returns its id. Returns error on error. 
+ */
+export async function createTable(app: App, rankingId: string, name: string): Promise<string | "error">
+{
+    const defaultScoringType: ScoringType = "Magic";
+
+    const response = await fetch("/api/scoreTable", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify({
+            "name": name,
+            "rankingId": rankingId,
+            "scoring": defaultScoringType
+        })
+    });
+
+    if (!response.ok) {
+        return "error";
+    }
+
+    return (await response.json()).id;
+}
+
+export interface TableSettings
+{
+    name: string | undefined,
+    scoring: ScoringType | undefined
+}
+
+/**
+ * Changes basic table settings.
+ */
+export async function updateTableSettings(app: App, tableId: string, settings: TableSettings): Promise<"ok" | "error">
+{
+    const response = await fetch("/api/scoreTable/" + tableId, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify({
+            "name": settings.name,
+            "scoring": settings.scoring
+        })
+    });
+
+    return response.ok ? "ok" : "error";
 }
 
 export interface MemberInfo

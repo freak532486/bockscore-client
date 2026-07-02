@@ -47,7 +47,8 @@ export class ScoreTableWrapper
             app,
             tableHeader?.name,
             membersRes.map(x => ({ "id": x.user.id, "name": x.name })),
-            "average"
+            "Average",
+            tableId
         );
 
         /* Fetch the scores */
@@ -136,13 +137,38 @@ export class ScoreTableHeaderWrapper
 {
     constructor(
         private readonly app: App,
-        public readonly name: string,
+        private _name: string,
         private readonly _members: Array<User>,
-        public readonly scoreMode: "average" | "magic"
+        private _scoreMode: api.ScoringType,
+        private tableId: string
     ) {}
 
     get members() {
         return this._members;
+    }
+
+    get name() {
+        return this._name;
+    }
+
+    get scoreMode() {
+        return this._scoreMode;
+    }
+
+    async changeSettings(settings: api.TableSettings): Promise<boolean>
+    {
+        if ((settings.name == undefined || settings.name == this._name) && (settings.scoring == undefined || settings.scoring == this._scoreMode)) {
+            return false;
+        }
+
+        const res = await api.updateTableSettings(this.app, this.tableId, settings);
+        if (res == "ok") {
+            this._name = settings.name || this._name;
+            this._scoreMode = settings.scoring || this._scoreMode;
+            return true;
+        }
+
+        return false;
     }
 }
 

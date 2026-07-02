@@ -29,8 +29,7 @@ export class Observable<T> {
         }
     }
 
-    subscribe(listener: ChangeListener<T>): () => void {
+    subscribe(listener: ChangeListener<T>) {
         this.listeners.add(listener);
-        return () => this.listeners.delete(listener);
     }
 }
