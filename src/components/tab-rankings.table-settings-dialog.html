@@ -1,0 +1,48 @@
+<div class="modal fade" tabindex="-1">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Table settings
+                </h5>
+
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label" for="input-table-name">New table name</label>
+                    <input id="input-table-name" type="text" class="form-control">
+                </div>
+                
+                <div class="mb-2">
+                    <label class="form-label" for="input-scoring-method">Score function</label>
+                    <select id="input-scoring-method" class="form-select">
+                        <option value="Average">Average</option>
+                        <option value="Magic">Harmonic</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <div>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                        <button id="btn-table-settings-update" type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
