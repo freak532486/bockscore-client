@@ -2,6 +2,7 @@ import { ErrorDialogComponent } from "../components/error-dialog";
 import { InputBlockerComponent } from "../components/input-blocker";
 import { EliminationTabComponent } from "../components/tab-elimination";
 import { Observable } from "./observable";
+import { RankingAccess } from "./ranking-access";
 import type { ScoreTableWrapper } from "./table-wrapper";
 
 /**
@@ -22,5 +23,5 @@ export class App
 
     public tabElimination: EliminationTabComponent = new EliminationTabComponent(this);
 
-    public rankingCache: Map<string, Map<string, ScoreTableWrapper>> = new Map();
+    public rankingAccess: RankingAccess = new RankingAccess(this);
 };

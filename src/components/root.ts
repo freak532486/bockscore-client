@@ -92,35 +92,9 @@ export class RootComponent implements Component
                     option.textContent = ranking.name;
                     selectRankings.appendChild(option);
 
-                    /* Write tables into cache if they dont exist. */
-                    if (!app.rankingCache.has(ranking.id)) {
-                        app.rankingCache.set(ranking.id, new Map());
-                    }
-
-                    const allTables = await api.fetchTablesForRanking(app, ranking.id);
-                    if (allTables == "error") {
-                        continue;
-                    }
-
-                    const rankingCache = app.rankingCache.get(ranking.id)!;
-                    for (const table of allTables) {
-                        if (rankingCache.has(table.id)) {
-                            continue;
-                        }
-
-                        const wrapper = await ScoreTableWrapper.loadTable(app, ranking.id, table.id);
-                        if (wrapper == "error" || wrapper == "not_found") {
-                            continue;
-                        }
-                        rankingCache.set(table.id, wrapper);
-                    }
-
-                    /* Remove tables from cache that don't exist */
-                    for (const tableId of rankingCache.keys()) {
-                        if (allTables.filter(x => x.id == tableId).length == 0) {
-                           rankingCache.delete(tableId);
-                        }
-                    }
+                    /* Refresh ranking access */
+                    app.rankingAccess.invalidateRanking(ranking.id);
+                    await app.rankingAccess.getAllTablesForRanking(ranking.id);
                 }
 
                 selectRankings.dispatchEvent(new Event("change", { "bubbles": true }));

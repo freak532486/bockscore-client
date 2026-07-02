@@ -47,27 +47,24 @@ export class RankingsTabComponent implements Component
         const tableScoringSelect = tableSettingsDialogView.querySelector("#input-scoring-method") as HTMLSelectElement;
 
         const btnTableSettings = this.view.querySelector("#btn-table-settings") as HTMLButtonElement;
-        btnTableSettings.onclick = () => {
+        btnTableSettings.onclick = async () => {
             if (app.selectedRankingId.value == null || app.selectedTableId.value == null) {
                 return;
             }
 
-            const curTableName = app.rankingCache.get(app.selectedRankingId.value)?.get(app.selectedTableId.value)?.header.name;
+            const table = await app.rankingAccess.getTable(app.selectedTableId.value);
+            if (table == "error") {
+                return;
+            }
+
+            const curTableName = table.header.name;
             tableNameInput.placeholder = curTableName || "";
             tableSettingsDialog.show();
         }
 
         const submitButton = tableSettingsDialogView.querySelector("#btn-table-settings-update") as HTMLButtonElement;
         submitButton.onclick = async () => {
-            if (app.selectedRankingId.value == null || app.selectedTableId.value == null) {
-                return;
-            }
-
-            const table = app.rankingCache.get(app.selectedRankingId.value)?.get(app.selectedTableId.value);
-            if (table == undefined) {
-                return;
-            }
-
+            const table = await this.getActiveTable();
             const name = tableNameInput.value.trim();
             const scoring = tableScoringSelect.value;
 
@@ -92,8 +89,7 @@ export class RankingsTabComponent implements Component
                     return;
                 }
 
-                const table = app.rankingCache.get(app.selectedRankingId.value)?.get(app.selectedTableId.value);
-
+                const table = await this.getActiveTable();
                 if (table == undefined) {
                     app.errorDialog.showError("The selected table does not exist.");
                 } else {
@@ -121,13 +117,7 @@ export class RankingsTabComponent implements Component
             return;
         }
 
-        const table = await ScoreTableWrapper.loadTable(this.app, this.app.selectedRankingId.value, res);
-        if (table == "error" || table == "not_found") {
-            this.app.errorDialog.showError("An error occured while creating the table.");
-            return;
-        }
-
-        this.app.rankingCache.get(this.app.selectedRankingId.value)!.set(res, table);
+        this.app.rankingAccess.invalidateRanking(this.app.selectedRankingId.value);
         await this.updateTables();
         
         this.app.selectedTableId.value = res;
@@ -141,21 +131,30 @@ export class RankingsTabComponent implements Component
         this.app.inputBlocker.runWithBlockedInput(async () => {
         ul.replaceChildren();
 
-        if (this.app.selectedRankingId.value == null || !this.app.rankingCache.has(this.app.selectedRankingId.value)) {
+        if (this.app.selectedRankingId.value == null) {
             header.classList.toggle("d-none", true);
             return;
         }
 
-        const tables = [...this.app.rankingCache.get(this.app.selectedRankingId.value)!.values()];
-
-        if (tables.length == 0) {
+        const tableIds = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
+        if (tableIds == "error" || tableIds.length == 0) {
             header.classList.toggle("d-none", true);
             return;
         }
 
-        header.classList.toggle("d-none", false);
+        /* Preload tables in parallel for fast performance */
+        const promises = tableIds.map(id => this.app.rankingAccess.getTable(id));
+        for (const promise of promises) {
+            await promise;
+        }
 
-        for (const table of tables) {
+        /* Create entries in header for each table */
+        for (const tableId of tableIds) {
+            const table = await this.app.rankingAccess.getTable(tableId);
+            if (table == "error") {
+                continue;
+            }
+
             const li = document.createElement("li");
             li.classList.add("nav-item");
             const btn = document.createElement("button");
@@ -169,7 +168,22 @@ export class RankingsTabComponent implements Component
             });
         }
 
-        this.app.selectedTableId.value = tables[0]!.id;
+        header.classList.toggle("d-none", false);
+        this.app.selectedTableId.value = tableIds[0]!;
     });
+    }
+
+    private async getActiveTable(): Promise<ScoreTableWrapper>
+    {
+        if (this.app.selectedTableId.value == null) {
+            throw new Error("No table selected");
+        }
+
+        const table = await this.app.rankingAccess.getTable(this.app.selectedTableId.value);
+        if (table == "error") {
+            throw new Error("Failed loading table");
+        }
+
+        return table;
     }
 }
