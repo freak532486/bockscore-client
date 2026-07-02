@@ -19,6 +19,12 @@ export class RootComponent implements Component
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
 
+        /* Apply theme from local storage */
+        const storedTheme = window.localStorage.getItem("theme");
+        if (storedTheme == "light" || storedTheme == "dark") {
+            this.setTheme(storedTheme);
+        }
+
         /* Create and setup dialog for adding ranking */
         const addRankingDialog = new InputDialog("Add Ranking");
         addRankingDialog.addTextInput(INPUT_RANKING_NAME_ID, "Ranking name");
@@ -163,18 +169,26 @@ export class RootComponent implements Component
 
     private toggleDarkMode()
     {
-        const btnDesktop = this.view.querySelector("#btn-theme-desktop") as HTMLButtonElement;
-        const btnMobile = this.view.querySelector("#btn-theme-mobile") as HTMLButtonElement;
-
         const curMode = document.documentElement.getAttribute("data-bs-theme");
         const newMode = curMode == "light" ? "dark" : "light";
 
-        document.documentElement.setAttribute("data-bs-theme", newMode);
+        this.setTheme(newMode);
+    }
+
+    private setTheme(theme: "light" | "dark")
+    {
+        const btnDesktop = this.view.querySelector("#btn-theme-desktop") as HTMLButtonElement;
+        const btnMobile = this.view.querySelector("#btn-theme-mobile") as HTMLButtonElement;
+
+        document.documentElement.setAttribute("data-bs-theme", theme);
 
         for (const btn of [btnDesktop, btnMobile]) {
             const icon = btn.querySelector("i") as HTMLElement;
-            icon.classList.toggle("bi-sun-fill", newMode == "light");
-            icon.classList.toggle("bi-moon-fill", newMode == "dark");
+            icon.classList.toggle("bi-sun-fill", theme == "light");
+            icon.classList.toggle("bi-moon-fill", theme == "dark");
         }
+
+        /* Store in browser storage */
+        window.localStorage.setItem("theme", theme);
     }
 }
