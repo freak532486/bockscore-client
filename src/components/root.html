@@ -9,11 +9,11 @@
                     <button class="btn btn-sm btn-primary" id="btn-add-ranking"><i class="bi bi-plus-lg"></i></button>
                 </div>
 
-                <button
-                    class="navbar-toggler"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#navbarContent">
+                <button id="btn-theme-mobile" class="btn ms-auto me-2 d-lg-none fs-4" aria-label="Toggle theme">
+                    <i class="bi bi-sun-fill"></i>
+                </button>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
@@ -26,8 +26,11 @@
                     </div>
 
                     <!-- Right -->
-                    <div class="logout d-flex flex-column flex-lg-row align-items-center align-items-lg-center justify-content-center justify-content-lg-end
-                gap-3 ms-lg-auto mt-3 mt-lg-0">
+                    <div class="logout d-flex flex-column flex-lg-row align-items-center align-items-lg-center justify-content-center justify-content-lg-end gap-3 ms-lg-auto mt-3 mt-lg-0">
+                        <button id="btn-theme-desktop" class="btn d-none d-md-flex fs-4"
+                            aria-label="Toggle theme">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
                         <span class="d-none d-md-flex align-items-center">
                             <span>Logged in as <strong class="text-success username">user</strong>.</span>
                         </span>
