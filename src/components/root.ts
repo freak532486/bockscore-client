@@ -8,6 +8,8 @@ import { RankingsTabComponent } from "./tab-rankings";
 import { ScoreTableWrapper } from "../common/table-wrapper";
 import { EliminationTabComponent } from "./tab-elimination";
 import { WheelTabComponent } from "./tab-wheel";
+import { Modal } from "bootstrap";
+import { InputDialog } from "./input-dialog";
 
 export class RootComponent implements Component
 {
@@ -18,6 +20,16 @@ export class RootComponent implements Component
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
 
+        /* Create and setup dialog for adding ranking */
+        const addRankingDialog = new InputDialog("Add Ranking");
+        addRankingDialog.addTextInput("input-ranking-name", "Ranking name");
+        addRankingDialog.primaryButton.textContent = "Add";
+
+        const addRankingButton = this.view.querySelector("#btn-add-ranking") as HTMLButtonElement;
+        addRankingButton.onclick = () => addRankingDialog.modal.show();
+        this.view.appendChild(addRankingDialog.view);
+
+        /* Setup other dialogs */
         document.body.appendChild(app.errorDialog.view);
         this.view.appendChild(app.inputBlocker.view);
 
