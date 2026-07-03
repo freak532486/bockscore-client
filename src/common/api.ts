@@ -472,3 +472,51 @@ export async function renameRow(app: App, entryId: string, newName: string): Pro
 
     return response.ok ? "ok" : "error";
 }
+
+/**
+ * Returns the saved image for the given entry.
+ */
+export async function getEntryImage(app: App, entryId: string): Promise<Blob | "not_found" | "error">
+{
+    const response = await fetch("/api/scoreTableEntry/" + entryId + "/image", {
+        method: "GET",
+        headers: {
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        }
+    });
+
+    if (response.status == 404) {
+        return "not_found";
+    }
+
+    const contentType = response.headers.get("Content-Type");
+    if (!response.ok || contentType == null) {
+        return "error";
+    }
+
+    const bytes = await response.bytes();
+    return new Blob([bytes], { "type": contentType });
+}
+
+/**
+ * Updates the entry image for the given entry.
+ */
+export async function setEntryImage(
+    app: App,
+    entryId: string,
+    image: Blob
+): Promise<"ok" | "error">
+{
+    const response = await fetch("/api/scoreTableEntry/" + entryId + "/image", {
+        method: "PUT",
+        headers: {
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || "",
+            "Content-Type": image.type
+        },
+        body: image
+    });
+
+    return response.ok ? "ok" : "error";
+}

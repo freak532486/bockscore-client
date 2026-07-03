@@ -53,6 +53,12 @@ export class MobileScoreTableComponent implements Component
                         this.refresh();
                     }
                 },
+                async image => {
+                    const success = await row.setImage(image);
+                    if (success) {
+                        this.refresh();
+                    }
+                },
                 async () => {
                     const success = await this.wrapper.deleteRow(row.id);
                     if (success) {
@@ -70,6 +76,7 @@ export class MobileScoreTableComponent implements Component
         name: string,
         scores: Map<string, number>,
         changeScore: (score: number | undefined, name: string | undefined) => void,
+        setEntryImage: (image: Blob) => void,
         deleteRow: () => void
     ): HTMLElement
     {
@@ -78,7 +85,7 @@ export class MobileScoreTableComponent implements Component
         const elem = htmlToElement(entry);
         (elem.querySelector(".name") as HTMLElement).textContent = name;
         (elem.querySelector(".fullscore") as HTMLElement).textContent = String(avgScore);
-        elem.onclick = () => this.detailDialog.show(name, scores, changeScore, deleteRow);
+        elem.onclick = () => this.detailDialog.show(name, scores, changeScore, setEntryImage, deleteRow);
         return elem;
     }
 }

@@ -18,6 +18,7 @@ export class RowDetailsDialog implements Component
         rowname: string,
         scores: Map<string, number>,
         changeScoreAndOrRowname: (score: number | undefined, newRowname: string | undefined) => void,
+        changeEntryImage: (image: Blob) => void,
         deleteRow: () => void
     ) {
         /* Write rowname into header */
@@ -46,7 +47,8 @@ export class RowDetailsDialog implements Component
         const btnSubmit = this.view.querySelector("#row-details-submit") as HTMLButtonElement;
         const input = this.view.querySelector("#row-score-input") as HTMLInputElement;
         const inputRowname = this.view.querySelector("#row-name-input") as HTMLInputElement;
-        btnSubmit.onclick = () => {
+        const inputEntryImage = this.view.querySelector("#input-entry-image") as HTMLInputElement;
+        btnSubmit.onclick = async () => {
             /* Change score if applies */
             let newScore: number | undefined = undefined;
             const num = Number(input.value);
@@ -62,6 +64,12 @@ export class RowDetailsDialog implements Component
             }
 
             changeScoreAndOrRowname(newScore, newRowname);
+
+            /* Possibly update the entry image */
+            const file = inputEntryImage.files?.[0];
+            if (file) {
+                changeEntryImage(new Blob([await file.bytes()], { "type": file.type }));
+            }
 
             this.modal.hide();
         }

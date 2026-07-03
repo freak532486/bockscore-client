@@ -81,7 +81,8 @@ export class ScoreTableWrapper
             x.id,
             x.name,
             scoreMap.get(x.id) || new Map(),
-            userIdToMemberId
+            userIdToMemberId,
+            undefined
         ));
 
         /* Done */
@@ -99,7 +100,7 @@ export class ScoreTableWrapper
     {
         const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
-            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId));
+            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId, undefined));
             return true;
         }
 
@@ -185,7 +186,8 @@ export class ScoreTableRowWrapper
         public readonly id: string,
         private _name: string,
         private readonly _data: Map<string, ScoreEntry>,
-        private readonly userToMemberId: Map<string, string>
+        private readonly userToMemberId: Map<string, string>,
+        private _image: Blob | undefined
     ) {}
 
     get name() {
@@ -258,6 +260,25 @@ export class ScoreTableRowWrapper
 
         if (res == "ok") {
             this._data.set(memberId, { "id": oldValue.id, "value": value });
+            return true;
+        }
+
+        return false;
+    }
+
+    get image()
+    {
+        return this._image;
+    }
+
+    async setImage(image: Blob): Promise<boolean> {
+        if (image.type !== "image/png" && image.type !== "image/jpeg") {
+            return false;
+        }
+
+        const res = await api.setEntryImage(this.app, this.id, image);
+        if (res == "ok") {
+            this._image = image;
             return true;
         }
 
