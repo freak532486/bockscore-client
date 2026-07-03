@@ -17,8 +17,7 @@ export class RowDetailsDialog implements Component
     show(
         rowname: string,
         scores: Map<string, number>,
-        changeScoreAndOrRowname: (score: number | undefined, newRowname: string | undefined) => void,
-        changeEntryImage: (image: Blob) => void,
+        update: (score?: number, newRowname?: string, newImage?: Blob) => void,
         deleteRow: () => void
     ) {
         /* Write rowname into header */
@@ -63,14 +62,11 @@ export class RowDetailsDialog implements Component
                 newRowname = inValue;
             }
 
-            changeScoreAndOrRowname(newScore, newRowname);
-
-            /* Possibly update the entry image */
+            /* Change image if applies */
             const file = inputEntryImage.files?.[0];
-            if (file) {
-                changeEntryImage(new Blob([await file.bytes()], { "type": file.type }));
-            }
+            const image = file == undefined ? undefined : new Blob([await file.bytes()], { "type": file.type });
 
+            update(newScore, newRowname, image);
             this.modal.hide();
         }
 

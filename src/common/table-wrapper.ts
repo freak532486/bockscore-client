@@ -76,14 +76,23 @@ export class ScoreTableWrapper
             return "error";
         }
 
-        const rows = rowsRes.map(x => new ScoreTableRowWrapper(
+        const fetchEntryImage = async (entryId: string) => {
+            const res = await api.getEntryImage(app, entryId);
+            if (res == "error" || res == "not_found") {
+                return undefined;
+            }
+
+            return res;
+        }
+
+        const rows = await Promise.all(rowsRes.map(async x => new ScoreTableRowWrapper(
             app,
             x.id,
             x.name,
             scoreMap.get(x.id) || new Map(),
             userIdToMemberId,
-            undefined
-        ));
+            await fetchEntryImage(x.id)
+        )));
 
         /* Done */
         return new ScoreTableWrapper(app, tableId, header, rows, userIdToMemberId);

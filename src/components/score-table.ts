@@ -1,7 +1,7 @@
 import template from "./score-table.html"
 import entry from "./score-table.entry.html"
 import type { App } from "../common/app";
-import type { ScoreTableWrapper } from "../common/table-wrapper";
+import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { RowDetailsDialog } from "./row-details";
@@ -35,27 +35,14 @@ export class MobileScoreTableComponent implements Component
         const group = this.view.querySelector("#div-entries") as HTMLElement;
         group.replaceChildren();
 
-        const members = this.wrapper.header.members;
-
         for (const row of this.wrapper.rows) {
-            const scores = new Map<string, number>();
-            for (const member of members) {
-                scores.set(member.name, row.getScore(member.id));
-            }
-
             const entry = this.createEntry(
-                row.name,
-                scores,
-                async (newScore, newRowname) => {
+                row,
+                async (newScore, newRowname, newImage) => {
                     const scoreChanged = newScore == undefined ? false : await row.setScore(newScore);
                     const nameChanged = newRowname == undefined ? false : await row.setName(newRowname);
-                    if (scoreChanged || nameChanged) {
-                        this.refresh();
-                    }
-                },
-                async image => {
-                    const success = await row.setImage(image);
-                    if (success) {
+                    const imageChanged = newImage == undefined ? false : await row.setImage(newImage);
+                    if (scoreChanged || nameChanged || imageChanged) {
                         this.refresh();
                     }
                 },
@@ -73,19 +60,30 @@ export class MobileScoreTableComponent implements Component
     }
 
     private createEntry(
-        name: string,
-        scores: Map<string, number>,
-        changeScore: (score: number | undefined, name: string | undefined) => void,
-        setEntryImage: (image: Blob) => void,
+        row: ScoreTableRowWrapper,
+        update: (score?: number, name?: string, image?: Blob) => void,
         deleteRow: () => void
     ): HTMLElement
     {
-        const avgScore = [...scores.values()].reduce((a, b) => a + b, 0) / scores.size;
+        /* Fetch scores for each user */
+        const scores = new Map<string, number>();
+        for (const member of this.wrapper.header.members) {
+            scores.set(member.name, row.getScore(member.id));
+        }
 
         const elem = htmlToElement(entry);
-        (elem.querySelector(".name") as HTMLElement).textContent = name;
-        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(avgScore);
-        elem.onclick = () => this.detailDialog.show(name, scores, changeScore, setEntryImage, deleteRow);
+        (elem.querySelector(".name") as HTMLElement).textContent = row.name;
+        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(this.wrapper.header.scoreMode);
+        elem.onclick = () => this.detailDialog.show(row.name, scores, update, deleteRow);
+
+        /* Create image link for entry image */
+        const domImg = elem.querySelector("img") as HTMLImageElement;
+        const img = row.image;
+        if (img !== undefined) {
+            const url = URL.createObjectURL(img);
+            domImg.src = url;
+        }
+
         return elem;
     }
 }
