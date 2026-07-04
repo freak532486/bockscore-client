@@ -9,7 +9,7 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 export class RowDetailsDialog implements Component {
     public readonly view: HTMLElement;
     private readonly modal: bootstrap.Modal;
-    private imageData?: Blob;
+    private imageData: Blob | undefined;
 
     constructor() {
         this.view = htmlToElement(template);
@@ -19,6 +19,7 @@ export class RowDetailsDialog implements Component {
         const inputFileUpload = this.view.querySelector("#input-image-upload") as HTMLInputElement;
         const btnPasteImage = this.view.querySelector("#btn-image-paste") as HTMLButtonElement;
         const imagePreview = this.view.querySelector("#image-preview") as HTMLImageElement;
+        const imagePreviewDiv = this.view.querySelector("#image-preview-div") as HTMLElement;
         const errMsg = this.view.querySelector("#image-err-msg") as HTMLElement;
 
         /* Pasting is not supported on some devies */
@@ -41,6 +42,7 @@ export class RowDetailsDialog implements Component {
                 this.imageData = new Blob([await file.bytes()], { "type": file.type });
                 const url = URL.createObjectURL(this.imageData);
                 imagePreview.src = url;
+                imagePreviewDiv.classList.remove("d-none");
             }
         }
 
@@ -56,6 +58,17 @@ export class RowDetailsDialog implements Component {
         btnPasteImage.onclick = async () => {
             updateFromFiles(await readClipboardFiles());
         }
+
+        /* Make remove button work */
+        const btnRemoveImage = this.view.querySelector("#btn-remove-image") as HTMLButtonElement;
+        btnRemoveImage.onclick = () => {
+            if (this.imageData == undefined) {
+                return;
+            }
+
+            this.imageData = undefined;
+            imagePreviewDiv.classList.add("d-none");
+        }
     }
 
     show(
@@ -64,6 +77,8 @@ export class RowDetailsDialog implements Component {
         update: (score?: number, newRowname?: string, newImage?: Blob) => void,
         deleteRow: () => void
     ) {
+        this.reset();
+
         /* Write rowname into header */
         (this.view.querySelector("#row-details-title") as HTMLElement).textContent = rowname;
 
@@ -86,15 +101,15 @@ export class RowDetailsDialog implements Component {
             tbody.appendChild(tr);
         }
 
+        const inputRowname = this.view.querySelector("#row-name-input") as HTMLInputElement;
+        const inputScore = this.view.querySelector("#row-score-input") as HTMLInputElement;
+
         /* Score change */
         const btnSubmit = this.view.querySelector("#row-details-submit") as HTMLButtonElement;
-        const input = this.view.querySelector("#row-score-input") as HTMLInputElement;
-        const inputRowname = this.view.querySelector("#row-name-input") as HTMLInputElement;
-        const inputEntryImage = this.view.querySelector("#input-entry-image") as HTMLInputElement;
         btnSubmit.onclick = async () => {
             /* Change score if applies */
             let newScore: number | undefined = undefined;
-            const num = Number(input.value);
+            const num = Number(inputScore.value);
             if (!Number.isNaN(num)) {
                 newScore = num;
             }
@@ -118,6 +133,21 @@ export class RowDetailsDialog implements Component {
         }
 
         this.modal.show();
+    }
+
+    private reset()
+    {
+        const inputRowname = this.view.querySelector("#row-name-input") as HTMLInputElement;
+        const inputScore = this.view.querySelector("#row-score-input") as HTMLInputElement;
+        const imagePreview = this.view.querySelector("#image-preview") as HTMLImageElement;
+        const errMsg = this.view.querySelector("#image-err-msg") as HTMLElement;
+
+        inputRowname.value = "";
+        inputScore.value = "";
+        errMsg.textContent = "";
+        imagePreview.src = "";
+        
+        errMsg.classList.add("d-none");
     }
 }
 
