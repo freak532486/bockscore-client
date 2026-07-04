@@ -66,14 +66,14 @@ export class MobileScoreTableComponent implements Component
     ): HTMLElement
     {
         /* Fetch scores for each user */
-        const scores = new Map<string, number>();
+        const scores = new Map<string, number | undefined>();
         for (const member of this.wrapper.header.members) {
             scores.set(member.name, row.getScore(member.id));
         }
 
         const elem = htmlToElement(entry);
         (elem.querySelector(".name") as HTMLElement).textContent = row.name;
-        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(row.getAvgScore(this.wrapper.header.scoreMode));
+        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(row.getAvgScore(this.wrapper.header.scoreMode) || "?");
         elem.onclick = () => this.detailDialog.show(row.name, scores, update, deleteRow);
 
         /* Create image link for entry image */

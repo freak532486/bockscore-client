@@ -1,8 +1,6 @@
 import type { App } from "./app";
 import * as api from "./api"
 
-const DEFAULT_SCORE = 5;
-
 /**
  * A wrapper around a score table. Can be modified. Every modification will automatically be sent to the API. If that
  * call fails, the table is also not modified internally.
@@ -216,21 +214,21 @@ export class ScoreTableRowWrapper
     /**
      * Returns the score given by the given user for this row.
      */
-    getScore(userId: string)
+    getScore(userId: string): number | undefined
     {
         const memberId = this.userToMemberId.get(userId);
         if (memberId == undefined) {
-            return DEFAULT_SCORE;
+            return undefined;
         }
 
-        return this._data.get(memberId)?.value || DEFAULT_SCORE;
+        return this._data.get(memberId)?.value;
     }
 
-    getAvgScore(type: api.ScoringType)
+    getAvgScore(type: api.ScoringType): number | undefined
     {
         const scores = [...this._data.values()].map(x => x.value);
         if (scores.length == 0) {
-            return DEFAULT_SCORE;
+            return undefined;
         }
 
         switch (type) {

@@ -73,7 +73,7 @@ export class RowDetailsDialog implements Component {
 
     show(
         rowname: string,
-        scores: Map<string, number>,
+        scores: Map<string, number | undefined>,
         update: (score?: number, newRowname?: string, newImage?: Blob) => void,
         deleteRow: () => void
     ) {
@@ -95,7 +95,7 @@ export class RowDetailsDialog implements Component {
             const td1 = document.createElement("td");
             const td2 = document.createElement("td");
             td1.textContent = score.name;
-            td2.textContent = String(score.score);
+            td2.textContent = String(score.score || "---");
             tr.appendChild(td1);
             tr.appendChild(td2);
             tbody.appendChild(tr);
