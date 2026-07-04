@@ -4,10 +4,7 @@
 
             <div class="modal-header">
                 <h5 class="modal-title" id="row-details-title"></h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Close">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
 
@@ -32,11 +29,7 @@
                 <h6 class="mb-3">Change your score</h6>
 
                 <div class="mb-3 d-flex flex-column gap-2 align-items-end">
-                    <input
-                        type="number"
-                        class="form-control"
-                        id="row-score-input"
-                        placeholder="Enter score">
+                    <input type="number" class="form-control" id="row-score-input" placeholder="Enter score">
                 </div>
 
                 <hr>
@@ -45,27 +38,32 @@
                 <h6 class="mb-3">Change row name</h6>
 
                 <div class="mb-4 d-flex flex-column gap-2 align-items-end">
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="row-name-input"
-                        placeholder="Enter row name">
+                    <input type="text" class="form-control" id="row-name-input" placeholder="Enter row name">
+                </div>
+
+                <hr>
+
+                <!-- Entry image -->
+                <h6 class="mb-3">Change image</h6>
+
+                <div class="d-flex flex-column gap-2 w-100">
+                    <div class="d-flex flex-row gap-2 w-100">
+                        <input type="file" id="input-image-upload" class="form-control flex-grow-1" accept="image/png,image/jpeg">
+                        <button id="btn-image-paste" class="btn btn-primary text-nowrap">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <span id="image-err-msg" class="d-none color-error"></span>
+                    <img id="image-preview" class="w-100" style="max-height: 100px; object-fit: contain;">
                 </div>
             </div>
 
             <div class="modal-footer d-flex w-100 justify-content-between">
-                <button
-                    type="button"
-                    class="btn btn-danger"
-                    id="btn-delete-row">
+                <button type="button" class="btn btn-danger" id="btn-delete-row">
                     Delete Row
                 </button>
 
-                <button
-                    type="button"
-                    class="btn btn-primary"
-                    id="row-details-submit"
-                    >
+                <button type="button" class="btn btn-primary" id="row-details-submit">
                     Submit
                 </button>
             </div>

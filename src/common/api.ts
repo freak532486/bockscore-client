@@ -1,4 +1,5 @@
 import type { App } from "./app"
+import { getCookie } from "./utils";
 
 export interface LoginRequest
 {
@@ -162,18 +163,12 @@ export async function updateXsrfToken(app: App): Promise<"ok" | "error">
         }
     });
 
-    const csrfCookie = await window.cookieStore.get("bockscore.x-csrf-token");
-    
+    const csrfCookie = getCookie("bockscore.x-csrf-token");
     if (csrfCookie == null) {
         return "error";
     }
 
-    const csrfToken = csrfCookie.value;
-    if (csrfToken == undefined) {
-        return "error";
-    }
-
-    app.csrfToken.value = csrfToken;
+    app.csrfToken.value = csrfCookie;
     return "ok";
 }
 
@@ -468,6 +463,54 @@ export async function renameRow(app: App, entryId: string, newName: string): Pro
             "x-csrf-token": app.csrfToken.value || ""
         },
         "body": JSON.stringify({ "name": newName })
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
+/**
+ * Returns the saved image for the given entry.
+ */
+export async function getEntryImage(app: App, entryId: string): Promise<Blob | "not_found" | "error">
+{
+    const response = await fetch("/api/scoreTableEntry/" + entryId + "/image", {
+        method: "GET",
+        headers: {
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        }
+    });
+
+    if (response.status == 404) {
+        return "not_found";
+    }
+
+    const contentType = response.headers.get("Content-Type");
+    if (!response.ok || contentType == null) {
+        return "error";
+    }
+
+    const bytes = await response.bytes();
+    return new Blob([bytes], { "type": contentType });
+}
+
+/**
+ * Updates the entry image for the given entry.
+ */
+export async function setEntryImage(
+    app: App,
+    entryId: string,
+    image: Blob
+): Promise<"ok" | "error">
+{
+    const response = await fetch("/api/scoreTableEntry/" + entryId + "/image", {
+        method: "PUT",
+        headers: {
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || "",
+            "Content-Type": image.type
+        },
+        body: image
     });
 
     return response.ok ? "ok" : "error";

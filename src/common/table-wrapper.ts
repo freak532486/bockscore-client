@@ -76,13 +76,23 @@ export class ScoreTableWrapper
             return "error";
         }
 
-        const rows = rowsRes.map(x => new ScoreTableRowWrapper(
+        const fetchEntryImage = async (entryId: string) => {
+            const res = await api.getEntryImage(app, entryId);
+            if (res == "error" || res == "not_found") {
+                return undefined;
+            }
+
+            return res;
+        }
+
+        const rows = await Promise.all(rowsRes.map(async x => new ScoreTableRowWrapper(
             app,
             x.id,
             x.name,
             scoreMap.get(x.id) || new Map(),
-            userIdToMemberId
-        ));
+            userIdToMemberId,
+            await fetchEntryImage(x.id)
+        )));
 
         /* Done */
         return new ScoreTableWrapper(app, tableId, header, rows, userIdToMemberId);
@@ -99,7 +109,7 @@ export class ScoreTableWrapper
     {
         const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
-            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId));
+            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId, undefined));
             return true;
         }
 
@@ -185,7 +195,8 @@ export class ScoreTableRowWrapper
         public readonly id: string,
         private _name: string,
         private readonly _data: Map<string, ScoreEntry>,
-        private readonly userToMemberId: Map<string, string>
+        private readonly userToMemberId: Map<string, string>,
+        private _image: Blob | undefined
     ) {}
 
     get name() {
@@ -215,7 +226,7 @@ export class ScoreTableRowWrapper
         return this._data.get(memberId)?.value || DEFAULT_SCORE;
     }
 
-    getAvgScore(type: "MEAN" | "MAGIC")
+    getAvgScore(type: api.ScoringType)
     {
         const scores = [...this._data.values()].map(x => x.value);
         if (scores.length == 0) {
@@ -223,8 +234,8 @@ export class ScoreTableRowWrapper
         }
 
         switch (type) {
-            case "MEAN": return avg(scores);
-            case "MAGIC": return magicMean(scores);
+            case "Average": return avg(scores);
+            case "Magic": return magicMean(scores);
         }
     }
 
@@ -258,6 +269,25 @@ export class ScoreTableRowWrapper
 
         if (res == "ok") {
             this._data.set(memberId, { "id": oldValue.id, "value": value });
+            return true;
+        }
+
+        return false;
+    }
+
+    get image()
+    {
+        return this._image;
+    }
+
+    async setImage(image: Blob): Promise<boolean> {
+        if (image.type !== "image/png" && image.type !== "image/jpeg") {
+            return false;
+        }
+
+        const res = await api.setEntryImage(this.app, this.id, image);
+        if (res == "ok") {
+            this._image = image;
             return true;
         }
 

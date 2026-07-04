@@ -1,0 +1,10 @@
+#input-paste-image {
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
+}
+
+#input-paste-image:focus {
+    outline: none;
+    border-color: var(--bs-primary) !important;
+    background-color: rgba(var(--bs-primary-rgb), .1);
+}
