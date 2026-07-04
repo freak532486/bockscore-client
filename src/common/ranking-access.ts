@@ -101,6 +101,9 @@ export class RankingAccess extends EventTarget
         return this.rankingLock.withLock(async () => this.rankings);
     }
 
+    /**
+     * Adds a ranking
+     */
     async addRanking(name: string): Promise<string | "error">
     {
         return this.rankingLock.withLock(async () => {
@@ -112,6 +115,46 @@ export class RankingAccess extends EventTarget
             this.rankings.push({ "id": res, "name": name });
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
             return res;
+        });
+    }
+
+    async deleteRanking(rankingId: string): Promise<"ok" | "error">
+    {
+        return this.rankingLock.withLock(async () => {
+            const res = await api.deleteRanking(this.app, rankingId);
+            if (res == "error") {
+                return "error";
+            }
+
+            for (const table of this.tablesPerRanking.get(rankingId) || []) {
+                this.tableIdToRankingId.delete(table.id);
+            }
+            this.tablesPerRanking.delete(rankingId);
+            this.rankings.splice(this.rankings.findIndex(x => x.id == rankingId), 1);
+
+            this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
+            return "ok";
+        });
+    }
+
+    async renameRanking(rankingId: string, name: string): Promise<"ok" | "error">
+    {
+        const actualName = name.trim();
+        if (actualName == "") {
+            return "error";
+        }
+
+        return this.rankingLock.withLock(async () => {
+            const res = await api.renameRanking(this.app, rankingId, actualName);
+            if (res == "error") {
+                return "error";
+            }
+
+            this.rankings.splice(this.rankings.findIndex(x => x.id == rankingId), 1);
+            this.rankings.push({ "id": rankingId, "name": actualName });
+
+            this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
+            return "ok";
         });
     }
 

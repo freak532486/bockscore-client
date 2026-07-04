@@ -3,19 +3,50 @@ import { Mutex } from "../common/mutex";
 import { RankingAccess } from "../common/ranking-access";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
+import { ConfirmDialog } from "./confirm-dialog";
 import { InputDialog } from "./input-dialog";
 import template from "./tab-settings.html"
 import rankingTemplate from "./tab-settings.ranking.html"
+import * as api from "../common/api"
 
 export class SettingsTab implements Component
 {
     public readonly view: HTMLElement;
+
+    private renameRankingDialog = new InputDialog("Rename ranking");
+    private inputRankingName: HTMLInputElement;
+
+    private confirmDialog = new ConfirmDialog();
+    private userDeleteConfirmDialog = new InputDialog("Confirm deletion");
 
     private refreshLock: Mutex = new Mutex();
 
     constructor(private readonly app: App)
     {
         this.view = htmlToElement(template);
+        this.inputRankingName = this.renameRankingDialog.addTextInput("input-ranking-name", "New name");
+        this.view.appendChild(this.renameRankingDialog.view);
+        this.view.append(this.confirmDialog.view);
+
+        const inputPassword = this.userDeleteConfirmDialog.addTextInput("input-pw", "Confirm password");
+        this.userDeleteConfirmDialog.primaryButton.textContent = "Delete User";
+        this.userDeleteConfirmDialog.primaryButton.classList.remove("btn-primary");
+        this.userDeleteConfirmDialog.primaryButton.classList.add("btn-danger");
+        this.userDeleteConfirmDialog.primaryButton.onclick = async () => {
+            const res = await api.deleteUser(app, inputPassword.value);
+            if (res == "bad_password") {
+                this.userDeleteConfirmDialog.showError("Wrong password.");
+                return;
+            }
+
+            if (res == "error") {
+                this.userDeleteConfirmDialog.showError("An error occured.");
+                return;
+            }
+
+            window.location.href = "/";
+        }
+        this.view.appendChild(this.userDeleteConfirmDialog.view);
 
         /* Refresh ranking list on every user change */
         app.rankingAccess.addEventListener(RankingAccess.EVENT_RANKINGS_CHANGED, () => this.updateRankingsView());
@@ -47,6 +78,10 @@ export class SettingsTab implements Component
             this.app.selectedRankingId.value = res;
             addRankingDialog.modal.hide();
         }
+
+        /* Make delete user button work */
+        const btnDeleteUser = this.view.querySelector("#btn-delete-user") as HTMLElement;
+        btnDeleteUser.onclick = () => this.userDeleteConfirmDialog.modal.show();
     }
 
     private async updateRankingsView()
@@ -83,6 +118,25 @@ export class SettingsTab implements Component
                 const btnSetActive = entry.querySelector(".btn-make-ranking-active") as HTMLButtonElement;
                 btnSetActive.disabled = active;
                 btnSetActive.onclick = () => this.app.selectedRankingId.value = ranking.id;
+
+                /* Delete button */
+                const btnDelete = entry.querySelector(".btn-delete-ranking") as HTMLButtonElement;
+                btnDelete.onclick = () => {
+                    this.confirmDialog.show("Do you want to delete ranking '" + ranking.name + "'?", () => {
+                        this.app.rankingAccess.deleteRanking(ranking.id);
+                    });
+                }
+
+                /* Rename button */
+                const btnRename = entry.querySelector(".btn-edit-ranking") as HTMLButtonElement;
+                btnRename.onclick = () => {
+                    this.inputRankingName.value = "";
+                    this.renameRankingDialog.modal.show();
+                    this.renameRankingDialog.primaryButton.onclick = () => {
+                        this.app.rankingAccess.renameRanking(ranking.id, this.inputRankingName.value);
+                        this.renameRankingDialog.modal.hide();
+                    }
+                }
 
                 div.appendChild(entry);
             }

@@ -10,8 +10,6 @@ import { InputDialog } from "./input-dialog";
 import { SettingsTab } from "./tab-settings";
 import { RankingAccess } from "../common/ranking-access";
 
-const INPUT_RANKING_NAME_ID = "input-ranking-name";
-
 export class RootComponent implements Component
 {
     public readonly view: HTMLElement;
@@ -32,6 +30,9 @@ export class RootComponent implements Component
         if (storedTheme == "light" || storedTheme == "dark") {
             this.setTheme(storedTheme);
         }
+
+        /* Write selected ranking into localstorage */
+        this.syncRankingFromLocalStorage();
 
         /* Add each tab to page */
         const tabs: Array<Component> = [
@@ -203,6 +204,34 @@ export class RootComponent implements Component
         }
 
         return registerDialog;
+    }
+
+    private syncRankingFromLocalStorage()
+    {
+        this.app.selectedRankingId.subscribe((val, old) => {
+            if (this.app.username.value == null) {
+                return;
+            }
+            
+            const key = "rankingId_" + this.app.username.value;
+            if (val == null) {
+                window.localStorage.removeItem(key);
+            } else {
+                window.localStorage.setItem(key, val);
+            }
+        });
+
+        const loadFromStorage = () => {
+            if (this.app.username.value == null) {
+                return;
+            }
+
+            const key = "rankingId_" + this.app.username.value;
+            this.app.selectedRankingId.value = window.localStorage.getItem(key);
+        }
+
+        this.app.username.subscribe(() => loadFromStorage());
+        loadFromStorage();
     }
 }
 
