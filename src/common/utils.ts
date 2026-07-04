@@ -12,3 +12,18 @@ export function htmlToElement(html: string): HTMLElement
 
     return root.content.firstElementChild as HTMLElement;
 }
+
+/**
+ * Fetches the value of the cookie with the given name.
+ */
+export function getCookie(name: string): string | null {
+    const prefix = encodeURIComponent(name) + "=";
+
+    for (const cookie of document.cookie.split("; ")) {
+        if (cookie.startsWith(prefix)) {
+            return decodeURIComponent(cookie.slice(prefix.length));
+        }
+    }
+
+    return null;
+}

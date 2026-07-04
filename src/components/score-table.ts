@@ -4,7 +4,7 @@ import type { App } from "../common/app";
 import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import { RowDetailsDialog } from "./row-details";
+import { RowDetailsDialog } from "./row-details-dialog";
 import "./score-table.entry.css"
 
 
@@ -73,7 +73,7 @@ export class MobileScoreTableComponent implements Component
 
         const elem = htmlToElement(entry);
         (elem.querySelector(".name") as HTMLElement).textContent = row.name;
-        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(this.wrapper.header.scoreMode);
+        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(row.getAvgScore(this.wrapper.header.scoreMode));
         elem.onclick = () => this.detailDialog.show(row.name, scores, update, deleteRow);
 
         /* Create image link for entry image */

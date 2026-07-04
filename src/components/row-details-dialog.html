@@ -4,10 +4,7 @@
 
             <div class="modal-header">
                 <h5 class="modal-title" id="row-details-title"></h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Close">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
 
@@ -32,11 +29,7 @@
                 <h6 class="mb-3">Change your score</h6>
 
                 <div class="mb-3 d-flex flex-column gap-2 align-items-end">
-                    <input
-                        type="number"
-                        class="form-control"
-                        id="row-score-input"
-                        placeholder="Enter score">
+                    <input type="number" class="form-control" id="row-score-input" placeholder="Enter score">
                 </div>
 
                 <hr>
@@ -45,39 +38,33 @@
                 <h6 class="mb-3">Change row name</h6>
 
                 <div class="mb-4 d-flex flex-column gap-2 align-items-end">
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="row-name-input"
-                        placeholder="Enter row name">
+                    <input type="text" class="form-control" id="row-name-input" placeholder="Enter row name">
                 </div>
+
+                <hr>
 
                 <!-- Entry image -->
                 <h6 class="mb-3">Change image</h6>
 
-                <div class="mb-4 d-flex flex-column gap-2 align-items-end">
-                    <input
-                        type="file"
-                        class="form-control"
-                        id="input-entry-image"
-                        accept="image/png,image/jpeg"
-                    >
+                <div class="d-flex flex-column gap-2 w-100">
+                    <div id="input-paste-image"
+                        class="border border-2 border-secondary border-opacity-50 rounded-3 p-5 text-center bg-body-tertiary"
+                        tabindex="0">
+                        <p class="text-body-secondary mb-0">
+                            Paste image using <kbd>Ctrl</kbd>+<kbd>V</kbd>
+                        </p>
+                    </div>
+                    <span id="image-err-msg" class="d-none color-error"></span>
+                    <img id="image-preview" class="w-100" style="max-height: 100px; object-fit: contain;">
                 </div>
             </div>
 
             <div class="modal-footer d-flex w-100 justify-content-between">
-                <button
-                    type="button"
-                    class="btn btn-danger"
-                    id="btn-delete-row">
+                <button type="button" class="btn btn-danger" id="btn-delete-row">
                     Delete Row
                 </button>
 
-                <button
-                    type="button"
-                    class="btn btn-primary"
-                    id="row-details-submit"
-                    >
+                <button type="button" class="btn btn-primary" id="row-details-submit">
                     Submit
                 </button>
             </div>

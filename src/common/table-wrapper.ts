@@ -226,7 +226,7 @@ export class ScoreTableRowWrapper
         return this._data.get(memberId)?.value || DEFAULT_SCORE;
     }
 
-    getAvgScore(type: "MEAN" | "MAGIC")
+    getAvgScore(type: api.ScoringType)
     {
         const scores = [...this._data.values()].map(x => x.value);
         if (scores.length == 0) {
@@ -234,8 +234,8 @@ export class ScoreTableRowWrapper
         }
 
         switch (type) {
-            case "MEAN": return avg(scores);
-            case "MAGIC": return magicMean(scores);
+            case "Average": return avg(scores);
+            case "Magic": return magicMean(scores);
         }
     }
 

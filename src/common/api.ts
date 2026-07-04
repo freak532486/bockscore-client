@@ -1,4 +1,5 @@
 import type { App } from "./app"
+import { getCookie } from "./utils";
 
 export interface LoginRequest
 {
@@ -162,18 +163,12 @@ export async function updateXsrfToken(app: App): Promise<"ok" | "error">
         }
     });
 
-    const csrfCookie = await window.cookieStore.get("bockscore.x-csrf-token");
-    
+    const csrfCookie = getCookie("bockscore.x-csrf-token");
     if (csrfCookie == null) {
         return "error";
     }
 
-    const csrfToken = csrfCookie.value;
-    if (csrfToken == undefined) {
-        return "error";
-    }
-
-    app.csrfToken.value = csrfToken;
+    app.csrfToken.value = csrfCookie;
     return "ok";
 }
 

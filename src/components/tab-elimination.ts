@@ -40,12 +40,12 @@ export class EliminationTabComponent implements Component
             if (table == "error") {
                 continue;
             }
-            
+
             const entries = [];
             for (const row of table.rows) {
                 entries.push({
                     "name": row.name,
-                    "score": settings.weightedImport ? row.getAvgScore("MEAN") : 1
+                    "score": settings.weightedImport ? row.getAvgScore(table.header.scoreMode) : 1
                 });
             }
 

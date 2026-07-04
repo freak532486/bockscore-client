@@ -1,17 +1,58 @@
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./row-details.html"
+import template from "./row-details-dialog.html"
 import * as bootstrap from "bootstrap"
+import "./row-details-dialog.css"
 
-export class RowDetailsDialog implements Component
-{
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+export class RowDetailsDialog implements Component {
     public readonly view: HTMLElement;
     private readonly modal: bootstrap.Modal;
+    private imageData?: Blob;
 
-    constructor()
-    {
+    constructor() {
         this.view = htmlToElement(template);
         this.modal = new bootstrap.Modal(this.view);
+
+        /* Make paste area work */
+        const pasteArea = this.view.querySelector("#input-paste-image") as HTMLElement;
+        const imagePreview = this.view.querySelector("#image-preview") as HTMLImageElement;
+        const errMsg = this.view.querySelector("#image-err-msg") as HTMLElement;
+
+        /* Common update function for listeners */
+        const updateFromFiles = async (files: Array<File>) => {
+            for (const file of files) {
+                if (file.size > MAX_IMAGE_SIZE) {
+                    errMsg.classList.remove("d-none");
+                    errMsg.textContent = "Image is too large!";
+                    continue;
+                }
+
+                if (!file.type.startsWith("image/")) {
+                    continue;
+                }
+
+                errMsg.classList.add("d-none");
+                this.imageData = new Blob([await file.bytes()], { "type": file.type });
+                const url = URL.createObjectURL(this.imageData);
+                imagePreview.src = url;
+            }
+        }
+
+        /* Paste listener */
+        pasteArea.addEventListener("paste", async (event) => {
+            const items = event.clipboardData?.items;
+            if (!items) {
+                return;
+            }
+
+            const files = [...items]
+                .map(x => x.getAsFile())
+                .filter(x => x !== null);
+
+            await updateFromFiles(files);
+        });
     }
 
     show(
@@ -62,11 +103,7 @@ export class RowDetailsDialog implements Component
                 newRowname = inValue;
             }
 
-            /* Change image if applies */
-            const file = inputEntryImage.files?.[0];
-            const image = file == undefined ? undefined : new Blob([await file.bytes()], { "type": file.type });
-
-            update(newScore, newRowname, image);
+            update(newScore, newRowname, this.imageData);
             this.modal.hide();
         }
 
