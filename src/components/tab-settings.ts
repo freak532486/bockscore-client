@@ -82,6 +82,11 @@ export class SettingsTab implements Component
         /* Make delete user button work */
         const btnDeleteUser = this.view.querySelector("#btn-delete-user") as HTMLElement;
         btnDeleteUser.onclick = () => this.userDeleteConfirmDialog.modal.show();
+
+        /* Update username span */
+        const usernameDisplay = this.view.querySelector("strong.username") as HTMLElement;
+        app.username.subscribe((val, _) => usernameDisplay.textContent = val)
+        usernameDisplay.textContent = app.username.value;
     }
 
     private async updateRankingsView()
