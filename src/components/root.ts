@@ -89,6 +89,10 @@ export class RootComponent implements Component
 
                 /* Update rankings selector and read tables into cache */
                 selectRankings.replaceChildren();
+
+                /* If not logged in, then nothing to show */
+                selectRankings.parentElement!.classList.toggle("d-none", app.authToken.value == null);
+
                 selectRankings.appendChild(
                     htmlToElement("<option value='' disabled selected>Select ranking</option>")
                 );
@@ -151,7 +155,10 @@ export class RootComponent implements Component
 
         /* Make logout usable */
         const logoutButton = logoutDiv.querySelector("#btn-logout") as HTMLButtonElement;
-        logoutButton.onclick = () => api.logout(app);
+        logoutButton.onclick = async () => {
+            await api.logout(app);
+            this.loginDialog.modal.show();
+        }
 
         /* Make login usable */
         this.loginDialog = new LoginDialogComponent(app);
@@ -175,6 +182,11 @@ export class RootComponent implements Component
 
         btnDesktop.onclick = () => this.toggleDarkMode();
         btnMobile.onclick = () => this.toggleDarkMode();
+
+        /* Show the login dialog by default if not logged in */
+        if (app.authToken.value == null) {
+            this.loginDialog.modal.show();
+        }
     }
 
     private toggleDarkMode()
