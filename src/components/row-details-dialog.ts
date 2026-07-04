@@ -16,9 +16,13 @@ export class RowDetailsDialog implements Component {
         this.modal = new bootstrap.Modal(this.view);
 
         /* Make paste area work */
-        const pasteArea = this.view.querySelector("#input-paste-image") as HTMLElement;
+        const inputFileUpload = this.view.querySelector("#input-image-upload") as HTMLInputElement;
+        const btnPasteImage = this.view.querySelector("#btn-image-paste") as HTMLButtonElement;
         const imagePreview = this.view.querySelector("#image-preview") as HTMLImageElement;
         const errMsg = this.view.querySelector("#image-err-msg") as HTMLElement;
+
+        /* Pasting is not supported on some devies */
+        btnPasteImage.classList.toggle("d-none", navigator.clipboard == undefined);
 
         /* Common update function for listeners */
         const updateFromFiles = async (files: Array<File>) => {
@@ -40,19 +44,18 @@ export class RowDetailsDialog implements Component {
             }
         }
 
-        /* Paste listener */
-        pasteArea.addEventListener("paste", async (event) => {
-            const items = event.clipboardData?.items;
-            if (!items) {
+        /* Listeners */
+        inputFileUpload.onchange = () => {
+            if (inputFileUpload.files == null) {
                 return;
             }
 
-            const files = [...items]
-                .map(x => x.getAsFile())
-                .filter(x => x !== null);
+            updateFromFiles([...inputFileUpload.files]);
+        };
 
-            await updateFromFiles(files);
-        });
+        btnPasteImage.onclick = async () => {
+            updateFromFiles(await readClipboardFiles());
+        }
     }
 
     show(
@@ -116,4 +119,30 @@ export class RowDetailsDialog implements Component {
 
         this.modal.show();
     }
+}
+
+async function readClipboardFiles() {
+    const items = await navigator.clipboard.read();
+    const files = [];
+
+    let i = 0;
+    for (const item of items) {
+        for (const type of item.types) {
+            const blob = await item.getType(type);
+            if (blob.type !== "image/png" && blob.type !== "image/jpeg") {
+                continue;
+            }
+
+            const filename = "clip-" + i;
+
+            files.push(
+                new File([blob], filename, {
+                    type: blob.type,
+                    lastModified: Date.now(),
+                })
+            );
+        }
+    }
+
+    return files;
 }

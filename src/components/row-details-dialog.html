@@ -47,12 +47,11 @@
                 <h6 class="mb-3">Change image</h6>
 
                 <div class="d-flex flex-column gap-2 w-100">
-                    <div id="input-paste-image"
-                        class="border border-2 border-secondary border-opacity-50 rounded-3 p-5 text-center bg-body-tertiary"
-                        tabindex="0">
-                        <p class="text-body-secondary mb-0">
-                            Paste image using <kbd>Ctrl</kbd>+<kbd>V</kbd>
-                        </p>
+                    <div class="d-flex flex-row gap-2 w-100">
+                        <input type="file" id="input-image-upload" class="form-control flex-grow-1" accept="image/png,image/jpeg">
+                        <button id="btn-image-paste" class="btn btn-primary text-nowrap">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
                     </div>
                     <span id="image-err-msg" class="d-none color-error"></span>
                     <img id="image-preview" class="w-100" style="max-height: 100px; object-fit: contain;">
