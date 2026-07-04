@@ -7,17 +7,23 @@ import { LoginDialogComponent } from "./login-dialog";
 import { RankingsTabComponent } from "./tab-rankings";
 import { WheelTabComponent } from "./tab-wheel";
 import { InputDialog } from "./input-dialog";
-
-const INPUT_RANKING_NAME_ID = "input-ranking-name";
+import { SettingsTab } from "./tab-settings";
+import { RankingAccess } from "../common/ranking-access";
 
 export class RootComponent implements Component
 {
     public readonly view: HTMLElement;
+    private readonly loginDialog: LoginDialogComponent;
+    private readonly registerDialog: InputDialog;
 
     constructor(private readonly app: App)
     {
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
+
+        /* Setup commonly used components */
+        document.body.appendChild(app.errorDialog.view);
+        document.body.appendChild(app.inputBlocker.view);
 
         /* Apply theme from local storage */
         const storedTheme = window.localStorage.getItem("theme");
@@ -25,24 +31,15 @@ export class RootComponent implements Component
             this.setTheme(storedTheme);
         }
 
-        /* Create and setup dialog for adding ranking */
-        const addRankingDialog = new InputDialog("Add Ranking");
-        addRankingDialog.addTextInput(INPUT_RANKING_NAME_ID, "Ranking name");
-        addRankingDialog.primaryButton.textContent = "Add";
-
-        const addRankingButton = this.view.querySelector("#btn-add-ranking") as HTMLButtonElement;
-        addRankingButton.onclick = () => addRankingDialog.modal.show();
-        this.view.appendChild(addRankingDialog.view);
-
-        /* Setup other dialogs */
-        document.body.appendChild(app.errorDialog.view);
-        this.view.appendChild(app.inputBlocker.view);
+        /* Write selected ranking into localstorage */
+        this.syncRankingFromLocalStorage();
 
         /* Add each tab to page */
         const tabs: Array<Component> = [
             new RankingsTabComponent(app),
             app.tabElimination,
-            new WheelTabComponent(app)
+            new WheelTabComponent(app),
+            new SettingsTab(app)
         ];
 
         tabs.forEach(x => {
@@ -70,50 +67,6 @@ export class RootComponent implements Component
             }
         }
 
-        /* Update active ranking on every login */
-        const selectRankings = this.view.querySelector("#select-rankings") as HTMLSelectElement;
-        selectRankings.onchange = () => app.selectedRankingId.value = 
-            selectRankings.value == ""
-                ? null
-                : selectRankings.value;
-
-        const updateRankings = async () => {
-            await app.inputBlocker.runWithBlockedInput(async () => {
-                const response = await api.fetchAllRankings(app);
-                if (response == "error") {
-                    app.errorDialog.showError("An error occured while fetching available rankings.");
-                    return;
-                }
-
-                /* Update rankings selector and read tables into cache */
-                selectRankings.replaceChildren();
-                selectRankings.classList.toggle("d-none", response.length == 0);
-                for (const ranking of response) {
-                    /* Create selector entry */
-                    const option = document.createElement("option");
-                    option.value = ranking.id;
-                    option.textContent = ranking.name;
-                    selectRankings.appendChild(option);
-
-                    /* Refresh ranking access */
-                    app.rankingAccess.invalidateRanking(ranking.id);
-                    await app.rankingAccess.getAllTablesForRanking(ranking.id);
-                }
-
-                selectRankings.dispatchEvent(new Event("change", { "bubbles": true }));
-            });
-        }
-
-        app.authToken.subscribe(() => updateRankings());
-        updateRankings();
-
-        /* Automatically update the select component as well */
-        this.app.selectedRankingId.subscribe((val, prev) => {
-            if (val !== null) {
-                selectRankings.value = val;
-            }
-        })
-
         /* Switch between login/logout view depending on app state */
         const loginDiv = this.view.querySelector("div.login") as HTMLDivElement;
         const logoutDiv = this.view.querySelector("div.logout") as HTMLDivElement;
@@ -126,32 +79,22 @@ export class RootComponent implements Component
         app.authToken.subscribe(() => loginButtonUpdate());
         loginButtonUpdate();
 
-        /* Make add ranking dialog work */
-        addRankingDialog.primaryButton.onclick = async () => {
-            const input = addRankingDialog.view.querySelector("#" + INPUT_RANKING_NAME_ID) as HTMLInputElement;
-            const rankingName = input.value.trim();
-            if (rankingName == "") {
-                return;
-            }
-
-            const res = await api.addRanking(this.app, rankingName);
-            if (res == "error") {
-                return;
-            }
-
-            await updateRankings();
-            this.app.selectedRankingId.value = res;
-        }
-
         /* Make logout usable */
         const logoutButton = logoutDiv.querySelector("#btn-logout") as HTMLButtonElement;
-        logoutButton.onclick = () => api.logout(app);
+        logoutButton.onclick = async () => {
+            await api.logout(app);
+            this.loginDialog.modal.show();
+        }
 
         /* Make login usable */
-        const loginDialog = new LoginDialogComponent(app);
-        document.body.appendChild(loginDialog.view);
+        this.loginDialog = new LoginDialogComponent(app);
+        document.body.appendChild(this.loginDialog.view);
         const loginButton = loginDiv.querySelector("#btn-login") as HTMLButtonElement;
-        loginButton.onclick = () => loginDialog.show();
+        loginButton.onclick = () => this.loginDialog.modal.show();
+
+        /* Create register dialog */
+        this.registerDialog = this.createRegisterDialog();
+        this.view.appendChild(this.registerDialog.view);
 
         /* Auto-update username */
         const usernameSpan = logoutDiv.querySelector(".username") as HTMLSpanElement;
@@ -165,6 +108,11 @@ export class RootComponent implements Component
 
         btnDesktop.onclick = () => this.toggleDarkMode();
         btnMobile.onclick = () => this.toggleDarkMode();
+
+        /* Show the login dialog by default if not logged in */
+        if (app.authToken.value == null) {
+            this.loginDialog.modal.show();
+        }
     }
 
     private toggleDarkMode()
@@ -191,4 +139,111 @@ export class RootComponent implements Component
         /* Store in browser storage */
         window.localStorage.setItem("theme", theme);
     }
+
+    private createRegisterDialog(): InputDialog
+    {
+        /* Setup dialog */
+        const registerDialog = new InputDialog("Register new user");
+        const inputUser = registerDialog.addTextInput("input-username", "Username");
+        const inputEmail = registerDialog.addTextInput("input-email", "E-Mail Address");
+        const inputPw = registerDialog.addTextInput("input-password", "Password");
+        const inputPwConfirm = registerDialog.addTextInput("input-password-confirm", "Confirm Password");
+
+        inputUser.autocomplete = "username";
+        inputUser.placeholder = "Username";
+        inputEmail.type = "email";
+        inputEmail.autocomplete = "email";
+        inputEmail.placeholder = "E-Mail";
+        inputPw.type = "password";
+        inputPw.autocomplete = "new-password";
+        inputPw.placeholder = "Password";
+        inputPwConfirm.type = "password";
+        inputPwConfirm.autocomplete = "new-password";
+        inputPwConfirm.placeholder = "Confirm Password";
+
+        registerDialog.primaryButton.textContent = "Register";
+
+        /* Open when register dialog link is clicked */
+        const registerLink = this.loginDialog.view.querySelector("#link-register") as HTMLLinkElement;
+        registerLink.onclick = () => {
+            this.loginDialog.modal.hide();
+            this.registerDialog.modal.show();
+        }
+
+        /* Send registration request on submit */
+        registerDialog.primaryButton.onclick = async () => {
+            if (inputPw.value !== inputPwConfirm.value) {
+                registerDialog.showError("Passwords do not match.");
+            }
+
+            const req: api.RegisterRequest = {
+                "name": inputUser.value,
+                "email": inputEmail.value,
+                "password": inputPw.value
+            }
+
+            const validationError = validateRegistrationRequest(req);
+            if (validationError !== null) {
+                registerDialog.showError(validationError);
+                return;
+            }
+
+            const res = await api.register(this.app, req);
+            if (res == "user_exists") {
+                registerDialog.showError("User already exists.");
+                return;
+            }
+
+            if (res == "error") {
+                registerDialog.showError("An error occured.");
+                return;
+            }
+
+            // Reload page, user will be logged in automatically thanks to refresh token cookie.
+            window.location.href = "/";
+        }
+
+        return registerDialog;
+    }
+
+    private syncRankingFromLocalStorage()
+    {
+        this.app.selectedRankingId.subscribe((val, old) => {
+            if (this.app.username.value == null) {
+                return;
+            }
+            
+            const key = "rankingId_" + this.app.username.value;
+            if (val == null) {
+                window.localStorage.removeItem(key);
+            } else {
+                window.localStorage.setItem(key, val);
+            }
+        });
+
+        const loadFromStorage = () => {
+            if (this.app.username.value == null) {
+                return;
+            }
+
+            const key = "rankingId_" + this.app.username.value;
+            this.app.selectedRankingId.value = window.localStorage.getItem(key);
+        }
+
+        this.app.username.subscribe(() => loadFromStorage());
+        loadFromStorage();
+    }
+}
+
+function validateRegistrationRequest(req: api.RegisterRequest): string | null
+{
+    if (req.name.length >= 64) {
+        return "Username is too long.";
+    }
+
+    if (req.password.length < 8) {
+        return "Password is too short";
+    }
+
+    return null;
 }

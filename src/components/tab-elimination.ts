@@ -33,10 +33,9 @@ export class EliminationTabComponent implements Component
             return;
         }
 
-        const tableIds = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
-
-        for (const tableId of tableIds) {
-            const table = await this.app.rankingAccess.getTable(tableId);
+        const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
+        for (const tableHeader of tableHeaders) {
+            const table = await this.app.rankingAccess.getTable(tableHeader.id);
             if (table == "error") {
                 continue;
             }
@@ -45,7 +44,7 @@ export class EliminationTabComponent implements Component
             for (const row of table.rows) {
                 entries.push({
                     "name": row.name,
-                    "score": settings.weightedImport ? row.getAvgScore(table.header.scoreMode) : 1
+                    "score": settings.weightedImport ? (row.getAvgScore(table.header.scoreMode) || 0) : 1
                 });
             }
 

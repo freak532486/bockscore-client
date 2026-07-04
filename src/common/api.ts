@@ -46,6 +46,35 @@ export async function login(app: App, request: LoginRequest): Promise<"ok" | "ba
     return "ok";
 }
 
+export interface RegisterRequest
+{
+    name: string,
+    email: string
+    password: string
+}
+
+export async function register(app: App, request: RegisterRequest): Promise<"ok" | "user_exists" | "error">
+{
+    const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify(request)
+    });
+
+    if (response.status == 409) {
+        return "user_exists";
+    }
+
+    if (!response.ok) {
+        return "error";
+    }
+
+    return "ok";
+}
+
 interface LogoutResponse {
     newTempUserId: string
 }
@@ -70,6 +99,7 @@ export async function logout(app: App): Promise<"ok" | "error">
     const logout = await response.json() as LogoutResponse;
     app.authToken.value = null;
     app.userId.value = logout.newTempUserId;
+    app.username.value = null;
     app.selectedTableId.value = null;
     app.selectedRankingId.value = null;
     return "ok";
@@ -102,6 +132,27 @@ export async function signin(app: App): Promise<"ok" | "error">
     app.authToken.value = login.accessToken;
     await updateUserInfo(app);
     return "ok";
+}
+
+export async function deleteUser(app: App, password: string): Promise<"ok" | "bad_password" | "error">
+{
+    const response = await fetch("/api/user/delete", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify({
+            "password": password
+        })
+    });
+
+    if (response.status == 401) {
+        return "bad_password";
+    }
+
+    return response.ok ? "ok" : "error";
 }
 
 export interface RankingResponse
@@ -149,6 +200,42 @@ export async function addRanking(app: App, name: string): Promise<string | "erro
     }
 
     return (await response.json()).id;
+}
+
+/**
+ * Deletes the given ranking.
+ */
+export async function deleteRanking(app: App, rankingId: string): Promise<"ok" | "error">
+{
+    const response = await fetch(
+        "/api/ranking/" + rankingId, {
+        method: "DELETE",
+        headers: {
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        }
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
+/**
+ * Renames the given ranking.
+ */
+export async function renameRanking(app: App, rankingId: string, name: string): Promise<"ok" | "error">
+{
+    const response = await fetch(
+        "/api/ranking/" + rankingId, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify({ "name": name })
+    });
+
+    return response.ok ? "ok" : "error";
 }
 
 /**

@@ -3,11 +3,7 @@
         <div class="container">
             <nav class="navbar navbar-dark navbar-expand-lg">
                 <!-- Left -->
-                <div class="input-group d-inline-flex w-auto">
-                    <select id="select-rankings" class="form-select">
-                    </select>
-                    <button class="btn btn-sm btn-primary" id="btn-add-ranking"><i class="bi bi-plus-lg"></i></button>
-                </div>
+                <img src="/images/logo.png" class="me-2" style="height: 40px;">
 
                 <button id="btn-theme-mobile" class="btn ms-auto me-2 d-lg-none fs-4" aria-label="Toggle theme">
                     <i class="bi bi-sun-fill"></i>
@@ -23,21 +19,24 @@
                         <button id="btn-table-tab" class="nav-link active">Score Tables</button>
                         <button id="btn-elimination-tab" class="nav-link">Elimination</button>
                         <button id="btn-wheel-tab" class="nav-link">Wheel</button>
+                        <button id="btn-settings-tab" class="nav-link">Settings</button>
                     </div>
 
                     <!-- Right -->
-                    <div class="logout d-flex flex-column flex-lg-row align-items-center align-items-lg-center justify-content-center justify-content-lg-end gap-3 ms-lg-auto mt-3 mt-lg-0">
+                    <div class="d-flex flex-column flex-lg-row align-items-center justify-content-center justify-content-lg-end gap-3 ms-lg-auto mt-3 mt-lg-0">
                         <button id="btn-theme-desktop" class="btn d-none d-md-flex fs-4"
                             aria-label="Toggle theme">
                             <i class="bi bi-sun-fill"></i>
                         </button>
-                        <span class="d-none d-md-flex align-items-center">
-                            <span>Logged in as <strong class="text-success username">user</strong>.</span>
-                        </span>
-                        <button id="btn-logout" class="btn btn-danger">Log Out</button>
-                    </div>
-                    <div class="login ms-auto d-flex">
-                        <button id="btn-login" class="btn btn-primary">Log In</button>
+                        <div class="logout d-flex flex-row gap-2">
+                            <span class="d-none d-md-flex align-items-center">
+                                <span>Logged in as <strong class="text-success username">user</strong>.</span>
+                            </span>
+                            <button id="btn-logout" class="btn btn-danger">Log Out</button>
+                        </div>
+                        <div class="login ms-auto d-flex">
+                            <button id="btn-login" class="btn btn-primary">Log In</button>
+                        </div>
                     </div>
                 </div>
             </nav>

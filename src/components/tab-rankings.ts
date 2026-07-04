@@ -38,6 +38,7 @@ export class RankingsTabComponent implements Component
         addTableDialog.primaryButton.onclick = async () => {
             const name = inputTableName.value.trim();
             this.addTable(name);
+            addTableDialog.modal.hide();
         }
 
         /* Setup table settings dialog */
@@ -136,21 +137,21 @@ export class RankingsTabComponent implements Component
             return;
         }
 
-        const tableIds = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
-        if (tableIds == "error" || tableIds.length == 0) {
+        const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
+        if (tableHeaders.length == 0) {
             header.classList.toggle("d-none", true);
             return;
         }
 
         /* Preload tables in parallel for fast performance */
-        const promises = tableIds.map(id => this.app.rankingAccess.getTable(id));
+        const promises = tableHeaders.map(x => this.app.rankingAccess.getTable(x.id));
         for (const promise of promises) {
             await promise;
         }
 
         /* Create entries in header for each table */
-        for (const tableId of tableIds) {
-            const table = await this.app.rankingAccess.getTable(tableId);
+        for (const tableHeader of tableHeaders) {
+            const table = await this.app.rankingAccess.getTable(tableHeader.id);
             if (table == "error") {
                 continue;
             }
@@ -169,7 +170,7 @@ export class RankingsTabComponent implements Component
         }
 
         header.classList.toggle("d-none", false);
-        this.app.selectedTableId.value = tableIds[0]!;
+        this.app.selectedTableId.value = tableHeaders[0]!.id;
     });
     }
 
