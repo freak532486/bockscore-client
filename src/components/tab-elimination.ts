@@ -33,10 +33,9 @@ export class EliminationTabComponent implements Component
             return;
         }
 
-        const tableIds = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
-
-        for (const tableId of tableIds) {
-            const table = await this.app.rankingAccess.getTable(tableId);
+        const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(this.app.selectedRankingId.value);
+        for (const tableHeader of tableHeaders) {
+            const table = await this.app.rankingAccess.getTable(tableHeader.id);
             if (table == "error") {
                 continue;
             }

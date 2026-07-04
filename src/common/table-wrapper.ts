@@ -24,11 +24,7 @@ export class ScoreTableWrapper
             return "error";
         }
 
-        const allTables = await api.fetchTablesForRanking(app, rankingId);
-        if (allTables == "error") {
-            return "error";
-        }
-
+        const allTables = await app.rankingAccess.getAllTablesForRanking(rankingId);
         const matchingTableHeaders = allTables.filter(x => x.id == tableId);
         if (matchingTableHeaders.length == 0) {
             return "not_found";

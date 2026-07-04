@@ -7,6 +7,8 @@ import { LoginDialogComponent } from "./login-dialog";
 import { RankingsTabComponent } from "./tab-rankings";
 import { WheelTabComponent } from "./tab-wheel";
 import { InputDialog } from "./input-dialog";
+import { SettingsTab } from "./tab-settings";
+import { RankingAccess } from "../common/ranking-access";
 
 const INPUT_RANKING_NAME_ID = "input-ranking-name";
 
@@ -21,30 +23,22 @@ export class RootComponent implements Component
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
 
+        /* Setup commonly used components */
+        document.body.appendChild(app.errorDialog.view);
+        document.body.appendChild(app.inputBlocker.view);
+
         /* Apply theme from local storage */
         const storedTheme = window.localStorage.getItem("theme");
         if (storedTheme == "light" || storedTheme == "dark") {
             this.setTheme(storedTheme);
         }
 
-        /* Create and setup dialog for adding ranking */
-        const addRankingDialog = new InputDialog("Add Ranking");
-        addRankingDialog.addTextInput(INPUT_RANKING_NAME_ID, "Ranking name");
-        addRankingDialog.primaryButton.textContent = "Add";
-
-        const addRankingButton = this.view.querySelector("#btn-add-ranking") as HTMLButtonElement;
-        addRankingButton.onclick = () => addRankingDialog.modal.show();
-        this.view.appendChild(addRankingDialog.view);
-
-        /* Setup other dialogs */
-        document.body.appendChild(app.errorDialog.view);
-        this.view.appendChild(app.inputBlocker.view);
-
         /* Add each tab to page */
         const tabs: Array<Component> = [
             new RankingsTabComponent(app),
             app.tabElimination,
-            new WheelTabComponent(app)
+            new WheelTabComponent(app),
+            new SettingsTab(app)
         ];
 
         tabs.forEach(x => {
@@ -72,56 +66,6 @@ export class RootComponent implements Component
             }
         }
 
-        /* Update active ranking on every login */
-        const selectRankings = this.view.querySelector("#select-rankings") as HTMLSelectElement;
-        selectRankings.onchange = () => app.selectedRankingId.value = 
-            selectRankings.value == ""
-                ? null
-                : selectRankings.value;
-
-        const updateRankings = async () => {
-            await app.inputBlocker.runWithBlockedInput(async () => {
-                const response = await api.fetchAllRankings(app);
-                if (response == "error") {
-                    app.errorDialog.showError("An error occured while fetching available rankings.");
-                    return;
-                }
-
-                /* Update rankings selector and read tables into cache */
-                selectRankings.replaceChildren();
-
-                /* If not logged in, then nothing to show */
-                selectRankings.parentElement!.classList.toggle("d-none", app.authToken.value == null);
-
-                selectRankings.appendChild(
-                    htmlToElement("<option value='' disabled selected>Select ranking</option>")
-                );
-                for (const ranking of response) {
-                    /* Create selector entry */
-                    const option = document.createElement("option");
-                    option.value = ranking.id;
-                    option.textContent = ranking.name;
-                    selectRankings.appendChild(option);
-
-                    /* Refresh ranking access */
-                    app.rankingAccess.invalidateRanking(ranking.id);
-                    await app.rankingAccess.getAllTablesForRanking(ranking.id);
-                }
-
-                selectRankings.dispatchEvent(new Event("change", { "bubbles": true }));
-            });
-        }
-
-        app.authToken.subscribe(() => updateRankings());
-        updateRankings();
-
-        /* Automatically update the select component as well */
-        this.app.selectedRankingId.subscribe((val, prev) => {
-            if (val !== null) {
-                selectRankings.value = val;
-            }
-        })
-
         /* Switch between login/logout view depending on app state */
         const loginDiv = this.view.querySelector("div.login") as HTMLDivElement;
         const logoutDiv = this.view.querySelector("div.logout") as HTMLDivElement;
@@ -133,25 +77,6 @@ export class RootComponent implements Component
         }
         app.authToken.subscribe(() => loginButtonUpdate());
         loginButtonUpdate();
-
-        /* Make add ranking dialog work */
-        addRankingDialog.primaryButton.onclick = async () => {
-            const input = addRankingDialog.view.querySelector("#" + INPUT_RANKING_NAME_ID) as HTMLInputElement;
-            const rankingName = input.value.trim();
-            if (rankingName == "") {
-                return;
-            }
-
-            const res = await api.addRanking(this.app, rankingName);
-            if (res == "error") {
-                addRankingDialog.showError("An error occured.");
-                return;
-            }
-
-            await updateRankings();
-            this.app.selectedRankingId.value = res;
-            addRankingDialog.modal.hide();
-        }
 
         /* Make logout usable */
         const logoutButton = logoutDiv.querySelector("#btn-logout") as HTMLButtonElement;

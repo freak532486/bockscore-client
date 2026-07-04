@@ -30,4 +30,13 @@ export class InputBlockerComponent implements Component
             this.setEnabled(false);
         }
     }
+
+    async runAsyncWithBlockedInput<T>(runnable: () => Promise<T>): Promise<T> {
+        try {
+            this.setEnabled(true);
+            return await runnable();
+        } finally {
+            this.setEnabled(false);
+        }
+    }
 }
