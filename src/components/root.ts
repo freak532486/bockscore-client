@@ -13,6 +13,8 @@ const INPUT_RANKING_NAME_ID = "input-ranking-name";
 export class RootComponent implements Component
 {
     public readonly view: HTMLElement;
+    private readonly loginDialog: LoginDialogComponent;
+    private readonly registerDialog: InputDialog;
 
     constructor(private readonly app: App)
     {
@@ -136,11 +138,13 @@ export class RootComponent implements Component
 
             const res = await api.addRanking(this.app, rankingName);
             if (res == "error") {
+                addRankingDialog.showError("An error occured.");
                 return;
             }
 
             await updateRankings();
             this.app.selectedRankingId.value = res;
+            addRankingDialog.modal.hide();
         }
 
         /* Make logout usable */
@@ -148,10 +152,14 @@ export class RootComponent implements Component
         logoutButton.onclick = () => api.logout(app);
 
         /* Make login usable */
-        const loginDialog = new LoginDialogComponent(app);
-        document.body.appendChild(loginDialog.view);
+        this.loginDialog = new LoginDialogComponent(app);
+        document.body.appendChild(this.loginDialog.view);
         const loginButton = loginDiv.querySelector("#btn-login") as HTMLButtonElement;
-        loginButton.onclick = () => loginDialog.show();
+        loginButton.onclick = () => this.loginDialog.modal.show();
+
+        /* Create register dialog */
+        this.registerDialog = this.createRegisterDialog();
+        this.view.appendChild(this.registerDialog.view);
 
         /* Auto-update username */
         const usernameSpan = logoutDiv.querySelector(".username") as HTMLSpanElement;
@@ -191,4 +199,83 @@ export class RootComponent implements Component
         /* Store in browser storage */
         window.localStorage.setItem("theme", theme);
     }
+
+    private createRegisterDialog(): InputDialog
+    {
+        /* Setup dialog */
+        const registerDialog = new InputDialog("Register new user");
+        const inputUser = registerDialog.addTextInput("input-username", "Username");
+        const inputEmail = registerDialog.addTextInput("input-email", "E-Mail Address");
+        const inputPw = registerDialog.addTextInput("input-password", "Password");
+        const inputPwConfirm = registerDialog.addTextInput("input-password-confirm", "Confirm Password");
+
+        inputUser.autocomplete = "username";
+        inputUser.placeholder = "Username";
+        inputEmail.type = "email";
+        inputEmail.autocomplete = "email";
+        inputEmail.placeholder = "E-Mail";
+        inputPw.type = "password";
+        inputPw.autocomplete = "new-password";
+        inputPw.placeholder = "Password";
+        inputPwConfirm.type = "password";
+        inputPwConfirm.autocomplete = "new-password";
+        inputPwConfirm.placeholder = "Confirm Password";
+
+        registerDialog.primaryButton.textContent = "Register";
+
+        /* Open when register dialog link is clicked */
+        const registerLink = this.loginDialog.view.querySelector("#link-register") as HTMLLinkElement;
+        registerLink.onclick = () => {
+            this.loginDialog.modal.hide();
+            this.registerDialog.modal.show();
+        }
+
+        /* Send registration request on submit */
+        registerDialog.primaryButton.onclick = async () => {
+            if (inputPw.value !== inputPwConfirm.value) {
+                registerDialog.showError("Passwords do not match.");
+            }
+
+            const req: api.RegisterRequest = {
+                "name": inputUser.value,
+                "email": inputEmail.value,
+                "password": inputPw.value
+            }
+
+            const validationError = validateRegistrationRequest(req);
+            if (validationError !== null) {
+                registerDialog.showError(validationError);
+                return;
+            }
+
+            const res = await api.register(this.app, req);
+            if (res == "user_exists") {
+                registerDialog.showError("User already exists.");
+                return;
+            }
+
+            if (res == "error") {
+                registerDialog.showError("An error occured.");
+                return;
+            }
+
+            // Reload page, user will be logged in automatically thanks to refresh token cookie.
+            window.location.href = "/";
+        }
+
+        return registerDialog;
+    }
+}
+
+function validateRegistrationRequest(req: api.RegisterRequest): string | null
+{
+    if (req.name.length >= 64) {
+        return "Username is too long.";
+    }
+
+    if (req.password.length < 8) {
+        return "Password is too short";
+    }
+
+    return null;
 }

@@ -41,4 +41,33 @@ export class InputDialog implements Component
         return domInput;
     }
 
+    showInfo(msg: string) {
+        this.showNotification("Info", msg);
+    }
+
+    showError(msg: string) {
+        this.showNotification("Error", msg);
+    }
+
+    showSuccess(msg: string) {
+        this.showNotification("Success", msg);
+    }  
+
+    showNotification(type: "Info" | "Error" | "Success", msg: string)
+    {
+        const div = this.view.querySelector(".alert") as HTMLElement;
+        div.textContent = msg;
+
+        div.classList.remove("d-none");
+        div.classList.toggle("alert-primary", type == "Info");
+        div.classList.toggle("alert-danger", type == "Error");
+        div.classList.toggle("alert-success", type == "Success");
+    }
+
+    hideNotification()
+    {
+        const div = this.view.querySelector(".alert") as HTMLElement;
+        div.classList.add("d-none");
+    }
+
 }

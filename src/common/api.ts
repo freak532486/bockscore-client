@@ -46,6 +46,35 @@ export async function login(app: App, request: LoginRequest): Promise<"ok" | "ba
     return "ok";
 }
 
+export interface RegisterRequest
+{
+    name: string,
+    email: string
+    password: string
+}
+
+export async function register(app: App, request: RegisterRequest): Promise<"ok" | "user_exists" | "error">
+{
+    const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify(request)
+    });
+
+    if (response.status == 409) {
+        return "user_exists";
+    }
+
+    if (!response.ok) {
+        return "error";
+    }
+
+    return "ok";
+}
+
 interface LogoutResponse {
     newTempUserId: string
 }

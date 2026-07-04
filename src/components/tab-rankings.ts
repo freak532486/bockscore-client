@@ -38,6 +38,7 @@ export class RankingsTabComponent implements Component
         addTableDialog.primaryButton.onclick = async () => {
             const name = inputTableName.value.trim();
             this.addTable(name);
+            addTableDialog.modal.hide();
         }
 
         /* Setup table settings dialog */

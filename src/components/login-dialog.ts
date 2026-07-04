@@ -9,7 +9,7 @@ import * as api from "../common/api"
 export class LoginDialogComponent implements Component
 {
     public readonly view: HTMLElement;
-    private readonly modal: bootstrap.Modal;
+    public readonly modal: bootstrap.Modal;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
@@ -40,9 +40,5 @@ export class LoginDialogComponent implements Component
             errorDiv.classList.add("d-none");
             this.modal.hide();
         };
-    }
-
-    show() {
-        this.modal.show();
     }
 }
