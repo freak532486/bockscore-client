@@ -89,7 +89,9 @@ export class RootComponent implements Component
 
                 /* Update rankings selector and read tables into cache */
                 selectRankings.replaceChildren();
-                selectRankings.classList.toggle("d-none", response.length == 0);
+                selectRankings.appendChild(
+                    htmlToElement("<option value='' disabled selected>Select ranking</option>")
+                );
                 for (const ranking of response) {
                     /* Create selector entry */
                     const option = document.createElement("option");
