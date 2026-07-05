@@ -8,14 +8,13 @@ import { InputDialog } from "./input-dialog";
 import template from "./tab-settings.html"
 import rankingTemplate from "./tab-settings.ranking.html"
 import * as api from "../common/api"
+import { EditRankingDialog } from "./tab-settings.edit-ranking-dialog";
 
 export class SettingsTab implements Component
 {
     public readonly view: HTMLElement;
 
-    private renameRankingDialog = new InputDialog("Rename ranking");
-    private inputRankingName: HTMLInputElement;
-
+    private editRankingDialog: EditRankingDialog;
     private confirmDialog = new ConfirmDialog();
     private userDeleteConfirmDialog = new InputDialog("Confirm deletion");
 
@@ -24,8 +23,8 @@ export class SettingsTab implements Component
     constructor(private readonly app: App)
     {
         this.view = htmlToElement(template);
-        this.inputRankingName = this.renameRankingDialog.addTextInput("input-ranking-name", "New name");
-        this.view.appendChild(this.renameRankingDialog.view);
+        this.editRankingDialog = new EditRankingDialog(app);
+        this.view.appendChild(this.editRankingDialog.view);
         this.view.append(this.confirmDialog.view);
 
         const inputPassword = this.userDeleteConfirmDialog.addTextInput("input-pw", "Confirm password");
@@ -134,12 +133,13 @@ export class SettingsTab implements Component
 
                 /* Rename button */
                 const btnRename = entry.querySelector(".btn-edit-ranking") as HTMLButtonElement;
-                btnRename.onclick = () => {
-                    this.inputRankingName.value = "";
-                    this.renameRankingDialog.modal.show();
-                    this.renameRankingDialog.primaryButton.onclick = () => {
-                        this.app.rankingAccess.renameRanking(ranking.id, this.inputRankingName.value);
-                        this.renameRankingDialog.modal.hide();
+                const inputRankingName = this.editRankingDialog.view.querySelector("#input-ranking-name") as HTMLInputElement;
+                btnRename.onclick = async () => {
+                    inputRankingName.value = "";
+                    this.editRankingDialog.show(ranking.id);
+                    this.editRankingDialog.primaryButton.onclick = () => {
+                        this.app.rankingAccess.renameRanking(ranking.id, inputRankingName.value);
+                        this.editRankingDialog.hide();
                     }
                 }
 

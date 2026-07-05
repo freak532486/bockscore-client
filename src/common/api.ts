@@ -404,6 +404,29 @@ export async function fetchMembersForRanking(app: App, rankingId: string): Promi
     return await response.json() as Array<MemberInfo>;
 }
 
+export async function inviteMember(app: App, rankingId: string, name: string): Promise<MemberInfo | "user_not_found" | "error">
+{
+    const response = await fetch("/api/member/" + rankingId + "/invite", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify({ "name": name })
+    });
+
+    if (response.status == 404) {
+        return "user_not_found"
+    }
+
+    if (!response.ok) {
+        return "error";
+    }
+
+    return await response.json() as MemberInfo;
+}
+
 export interface ScoreTableRow
 {
     "id": string,

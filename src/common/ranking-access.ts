@@ -13,11 +13,13 @@ export class RankingAccess extends EventTarget
 {
     public static readonly EVENT_RANKINGS_CHANGED = "rankings_changed";
     public static readonly EVENT_TABLES_CHANGED = "tables_changed";
+    public static readonly EVENT_MEMBERS_CHANGED = "members_changed";
 
     private rankings: Array<Ranking> = [];
     private tablesPerRanking: Map<string, Array<api.ScoreTableHeader>> = new Map();
     private tableIdToRankingId: Map<string, string> = new Map();
     private tableCache: Map<string, ScoreTableWrapper> = new Map();
+    private membersPerRanking: Map<string, Array<api.MemberInfo>> = new Map();
 
     private rankingLock = new Mutex();
     private tableCacheLock = new Mutex();
@@ -174,6 +176,42 @@ export class RankingAccess extends EventTarget
             this.tablesPerRanking.delete(rankingId);
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_TABLES_CHANGED, { "detail": rankingId }));
         });
+    }
+
+    async getMembersForRanking(rankingId: string): Promise<Array<api.MemberInfo>>
+    {
+        if (this.membersPerRanking.has(rankingId)) {
+            return this.membersPerRanking.get(rankingId)!;
+        }
+
+        const members = await api.fetchMembersForRanking(this.app, rankingId);
+        if (members == "error") {
+            this.app.errorDialog.showError("An error occured trying to fetch members for ranking.");
+            return [];
+        }
+
+        this.membersPerRanking.set(rankingId, members);
+        return members;
+    }
+
+    async inviteMember(rankingId: string, name: string): Promise<api.MemberInfo | "user_not_found" | "error">
+    {
+        const res = await api.inviteMember(this.app, rankingId, name);
+        if (res == "user_not_found") {
+            return "user_not_found";
+        }
+        
+        if (res == "error") {
+            return "error";
+        }
+
+        if (!this.membersPerRanking.has(rankingId)) {
+            await this.getMembersForRanking(rankingId);
+        }
+
+        this.membersPerRanking.get(rankingId)!.push(res);
+        this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_MEMBERS_CHANGED, { detail: rankingId }));
+        return res;
     }
 
     private async invalidateCache()
