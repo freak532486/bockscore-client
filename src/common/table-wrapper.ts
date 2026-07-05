@@ -41,7 +41,7 @@ export class ScoreTableWrapper
             app,
             tableHeader?.name,
             membersRes.map(x => ({ "id": x.user.id, "name": x.name })),
-            "Average",
+            tableHeader.scoring,
             tableId
         );
 
@@ -51,7 +51,7 @@ export class ScoreTableWrapper
             return "error";
         }
 
-        const scoreMap = new Map<string, Map<string, ScoreEntry>>(); // entryId -> memberId -> value
+        const scoreMap = new Map<string, Map<string, number>>(); // entryId -> memberId -> value
         for (const score of scoresRes) {
             if (score.value == undefined) {
                 continue;
@@ -61,7 +61,7 @@ export class ScoreTableWrapper
                 scoreMap.set(score.entryId, new Map());
             }
 
-            scoreMap.get(score.entryId)!.set(score.memberId, { id: score.id, value: score.value });
+            scoreMap.get(score.entryId)!.set(score.memberId, score.value);
         }
 
         /* Fetch all table rows and create wrappers */
@@ -176,19 +176,13 @@ export class ScoreTableHeaderWrapper
     }
 }
 
-interface ScoreEntry
-{
-    id: string | undefined,
-    value: number
-}
-
 export class ScoreTableRowWrapper
 {
     constructor(
         private readonly app: App,
         public readonly id: string,
         private _name: string,
-        private readonly _data: Map<string, ScoreEntry>,
+        private readonly _data: Map<string, number>,
         private readonly userToMemberId: Map<string, string>,
         private _image: Blob | undefined
     ) {}
@@ -217,12 +211,12 @@ export class ScoreTableRowWrapper
             return undefined;
         }
 
-        return this._data.get(memberId)?.value;
+        return this._data.get(memberId);
     }
 
     getAvgScore(type: api.ScoringType): number | undefined
     {
-        const scores = [...this._data.values()].map(x => x.value);
+        const scores = [...this._data.values()];
         if (scores.length == 0) {
             return undefined;
         }
@@ -247,22 +241,22 @@ export class ScoreTableRowWrapper
         if (memberId == undefined) {
             return false;
         }
-        const oldValue = this._data.get(memberId);
 
-        if (oldValue == undefined || oldValue.id == undefined) {
-            const res = await api.createScore(this.app, memberId, this.id, value);
+        const oldValue = this._data.get(memberId);
+        if (oldValue == undefined) {
+            const res = await api.createScore(this.app, this.id, memberId, value);
             if (res == "error") {
                 return false;
             }
 
-            this._data.set(memberId, { "id": res, "value": value });
+            this._data.set(memberId, value);
             return true;
         }
         
-        const res = await api.setScore(this.app, oldValue.id, value);
+        const res = await api.setScore(this.app, this.id, memberId, value);
 
         if (res == "ok") {
-            this._data.set(memberId, { "id": oldValue.id, "value": value });
+            this._data.set(memberId, value);
             return true;
         }
 
@@ -301,6 +295,7 @@ function magicMean(arr: Array<number>) {
     for (const s of arr) {
         sum += s ** e;
     }
+    sum /= arr.length;
 
     return sum ** (1 / e);
 }

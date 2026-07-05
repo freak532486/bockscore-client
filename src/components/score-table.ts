@@ -71,9 +71,10 @@ export class MobileScoreTableComponent implements Component
             scores.set(member.name, row.getScore(member.id));
         }
 
+        const avgScore = row.getAvgScore(this.wrapper.header.scoreMode);
         const elem = htmlToElement(entry);
         (elem.querySelector(".name") as HTMLElement).textContent = row.name;
-        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(row.getAvgScore(this.wrapper.header.scoreMode) || "?");
+        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(avgScore?.toFixed(2) || "?");
         elem.onclick = () => this.detailDialog.show(row.name, scores, update, deleteRow);
 
         /* Create image link for entry image */
