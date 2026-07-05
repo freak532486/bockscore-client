@@ -289,11 +289,12 @@ function avg(arr: Array<number>)
 }
 
 function magicMean(arr: Array<number>) {
+    console.log(arr);
     const e = -1.2;
 
     let sum = 0;
     for (const s of arr) {
-        sum += s ** e;
+        sum += s == 0 ? 1 : s ** e;
     }
     sum /= arr.length;
 
