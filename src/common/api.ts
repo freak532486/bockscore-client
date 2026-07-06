@@ -380,7 +380,7 @@ export interface MemberInfo
     "id": string,
     "name": string,
     "isGuest": boolean,
-    "user": UserInfo
+    "user"?: UserInfo
 }
 
 /**
