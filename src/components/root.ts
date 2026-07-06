@@ -47,8 +47,7 @@ export class RootComponent implements Component
             x.view.classList.add("d-none");
         });
 
-        tabs[0]!.view.classList.remove("d-none"); // Initial tab is rankings tab.
-
+        tabs[3]!.view.classList.remove("d-none"); // Initial tab is settings tab.
 
         /* Make tabs switchable */
         const tabButtons = [...this.view.querySelectorAll(".tabs .nav-link")] as Array<HTMLButtonElement>;
@@ -66,6 +65,42 @@ export class RootComponent implements Component
                 }
             }
         }
+
+        /* Other tabs become selectable as soon as there is an active tab */
+        const makeTabsSelectable = async () => {
+            let activeRankingExists = true;
+            if (this.app.selectedRankingId.value == null) {
+                activeRankingExists = false;
+            }
+
+            const allRankings = await this.app.rankingAccess.getAllRankings();
+            if (!allRankings.find(x => x.id == this.app.selectedRankingId.value)) {
+                activeRankingExists = false;
+            }
+
+            tabButtons[0]!.classList.toggle("d-none", !activeRankingExists);
+            tabButtons[1]!.classList.toggle("d-none", !activeRankingExists);
+            tabButtons[2]!.classList.toggle("d-none", !activeRankingExists);
+
+            /* Switch to settings tab if active ranking doesnt exist */
+            if (activeRankingExists) {
+                return;
+            }
+
+            tabButtons[0]!.classList.remove("active");
+            tabButtons[1]!.classList.remove("active");
+            tabButtons[2]!.classList.remove("active");
+            tabButtons[3]!.classList.add("active");
+
+            tabs[0]!.view.classList.add("d-none");
+            tabs[1]!.view.classList.add("d-none");
+            tabs[2]!.view.classList.add("d-none");
+            tabs[3]!.view.classList.remove("d-none");
+        }
+
+        this.app.selectedRankingId.subscribe(() => makeTabsSelectable());
+        this.app.rankingAccess.addEventListener(RankingAccess.EVENT_RANKINGS_CHANGED, () => makeTabsSelectable());
+        
 
         /* Switch between login/logout view depending on app state */
         const loginDiv = this.view.querySelector("div.login") as HTMLDivElement;
