@@ -34,13 +34,15 @@ export class ScoreTableWrapper
 
         const userIdToMemberId = new Map<string, string>();
         for (const member of membersRes) {
-            userIdToMemberId.set(member.user.id, member.id);
+            if (member.user) {
+                userIdToMemberId.set(member.user.id, member.id);
+            }
         }
 
         const header = new ScoreTableHeaderWrapper(
             app,
             tableHeader?.name,
-            membersRes.map(x => ({ "id": x.user.id, "name": x.name })),
+            membersRes,
             tableHeader.scoring,
             tableId
         );
@@ -131,18 +133,12 @@ export class ScoreTableWrapper
 
 }
 
-export interface User
-{
-    id: string,
-    name: string
-}
-
 export class ScoreTableHeaderWrapper
 {
     constructor(
         private readonly app: App,
         private _name: string,
-        private readonly _members: Array<User>,
+        private readonly _members: Array<api.MemberInfo>,
         private _scoreMode: api.ScoringType,
         private tableId: string
     ) {}
@@ -204,9 +200,8 @@ export class ScoreTableRowWrapper
     /**
      * Returns the score given by the given user for this row.
      */
-    getScore(userId: string): number | undefined
+    getScore(memberId: string): number | undefined
     {
-        const memberId = this.userToMemberId.get(userId);
         if (memberId == undefined) {
             return undefined;
         }
