@@ -404,6 +404,29 @@ export async function fetchMembersForRanking(app: App, rankingId: string): Promi
     return await response.json() as Array<MemberInfo>;
 }
 
+export async function inviteMember(app: App, rankingId: string, name: string): Promise<MemberInfo | "user_not_found" | "error">
+{
+    const response = await fetch("/api/member/" + rankingId + "/invite", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + app.authToken.value || "",
+            "x-csrf-token": app.csrfToken.value || ""
+        },
+        body: JSON.stringify({ "name": name })
+    });
+
+    if (response.status == 404) {
+        return "user_not_found"
+    }
+
+    if (!response.ok) {
+        return "error";
+    }
+
+    return await response.json() as MemberInfo;
+}
+
 export interface ScoreTableRow
 {
     "id": string,
@@ -434,7 +457,6 @@ export async function fetchScoreTableRows(app: App, tableId: string): Promise<Ar
 
 export interface UserScore
 {
-    "id": string,
     "memberId": string,
     "entryId": string,
     "value": number | undefined
@@ -463,9 +485,10 @@ export async function fetchUserScores(app: App, userIds: Array<string>): Promise
     return await response.json() as Array<UserScore>;
 }
 
-export async function createScore(app: App, memberId: string, rowId: string, value: number): Promise<string | "error">
+export async function createScore(app: App, entryId: string, memberId: string, value: number): Promise<string | "error">
 {
-    const response = await fetch("/api/userscore", {
+    const response = await fetch(
+        `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -473,8 +496,6 @@ export async function createScore(app: App, memberId: string, rowId: string, val
             "x-csrf-token": app.csrfToken.value || ""
         },
         "body": JSON.stringify({
-            "entryId": rowId,
-            "memberId": memberId,
             "value": value
         })
     });
@@ -487,9 +508,10 @@ export async function createScore(app: App, memberId: string, rowId: string, val
     return (await response.json()).id as string;
 }
 
-export async function setScore(app: App, valueId: string, value: number): Promise<"ok" | "error">
+export async function setScore(app: App, entryId: string, memberId: string, value: number): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/userscore/" + valueId, {
+    const response = await fetch(
+        `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
