@@ -90,63 +90,69 @@ export class SettingsTab implements Component
 
     private async updateRankingsView()
     {
+        const spinner = this.view.querySelector("div.spinner-border") as HTMLElement;
         await this.refreshLock.withLock(async () => {
-            const div = this.view.querySelector("#div-rankings") as HTMLElement;
-            div.replaceChildren();
-            div.classList.add("d-none");
+            try {
+                spinner.classList.remove("d-none");
+                const div = this.view.querySelector("#div-rankings") as HTMLElement;
+                div.replaceChildren();
+                div.classList.add("d-none");
 
-            for (const ranking of await this.app.rankingAccess.getAllRankings()) {
-                const active = ranking.id == this.app.selectedRankingId.value;
+                for (const ranking of await this.app.rankingAccess.getAllRankings()) {
+                    const active = ranking.id == this.app.selectedRankingId.value;
 
-                /* Fill text */
-                const entry = htmlToElement(rankingTemplate);
-                (entry.querySelector(".ranking-name") as HTMLElement).textContent = ranking.name + (active ? " (Active)" : "");
+                    /* Fill text */
+                    const entry = htmlToElement(rankingTemplate);
+                    (entry.querySelector(".ranking-name") as HTMLElement).textContent = ranking.name + (active ? " (Active)" : "");
 
-                let numTables = 0;
-                let numEntries = 0;
+                    let numTables = 0;
+                    let numEntries = 0;
 
-                const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(ranking.id);
-                numTables = tableHeaders.length;
-                for (const tableHeader of tableHeaders) {
-                    const table = await this.app.rankingAccess.getTable(tableHeader.id);
-                    if (table == "error") {
-                        continue;
+                    const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(ranking.id);
+                    numTables = tableHeaders.length;
+                    for (const tableHeader of tableHeaders) {
+                        const table = await this.app.rankingAccess.getTable(tableHeader.id);
+                        if (table == "error") {
+                            continue;
+                        }
+
+                        numEntries += table.rows.length;
                     }
 
-                    numEntries += table.rows.length;
-                }
+                    (entry.querySelector(".ranking-summary") as HTMLElement).textContent = `${numTables} tables, ${numEntries} entries.`;
 
-                (entry.querySelector(".ranking-summary") as HTMLElement).textContent = `${numTables} tables, ${numEntries} entries.`;
+                    /* Set active button */
+                    const btnSetActive = entry.querySelector(".btn-make-ranking-active") as HTMLButtonElement;
+                    btnSetActive.disabled = active;
+                    btnSetActive.onclick = () => this.app.selectedRankingId.value = ranking.id;
 
-                /* Set active button */
-                const btnSetActive = entry.querySelector(".btn-make-ranking-active") as HTMLButtonElement;
-                btnSetActive.disabled = active;
-                btnSetActive.onclick = () => this.app.selectedRankingId.value = ranking.id;
-
-                /* Delete button */
-                const btnDelete = entry.querySelector(".btn-delete-ranking") as HTMLButtonElement;
-                btnDelete.onclick = () => {
-                    this.confirmDialog.show("Do you want to delete ranking '" + ranking.name + "'?", () => {
-                        this.app.rankingAccess.deleteRanking(ranking.id);
-                    });
-                }
-
-                /* Rename button */
-                const btnRename = entry.querySelector(".btn-edit-ranking") as HTMLButtonElement;
-                const inputRankingName = this.editRankingDialog.view.querySelector("#input-ranking-name") as HTMLInputElement;
-                btnRename.onclick = async () => {
-                    inputRankingName.value = "";
-                    this.editRankingDialog.show(ranking.id);
-                    this.editRankingDialog.primaryButton.onclick = () => {
-                        this.app.rankingAccess.renameRanking(ranking.id, inputRankingName.value);
-                        this.editRankingDialog.hide();
+                    /* Delete button */
+                    const btnDelete = entry.querySelector(".btn-delete-ranking") as HTMLButtonElement;
+                    btnDelete.onclick = () => {
+                        this.confirmDialog.show("Do you want to delete ranking '" + ranking.name + "'?", () => {
+                            this.app.rankingAccess.deleteRanking(ranking.id);
+                        });
                     }
+
+                    /* Rename button */
+                    const btnRename = entry.querySelector(".btn-edit-ranking") as HTMLButtonElement;
+                    const inputRankingName = this.editRankingDialog.view.querySelector("#input-ranking-name") as HTMLInputElement;
+                    btnRename.onclick = async () => {
+                        inputRankingName.value = "";
+                        this.editRankingDialog.show(ranking.id);
+                        this.editRankingDialog.primaryButton.onclick = () => {
+                            this.app.rankingAccess.renameRanking(ranking.id, inputRankingName.value);
+                            this.editRankingDialog.hide();
+                        }
+                    }
+
+                    div.appendChild(entry);
                 }
 
-                div.appendChild(entry);
+                div.classList.remove("d-none");
+            } finally {
+                spinner.classList.add("d-none");
             }
-
-            div.classList.remove("d-none");
         });
     }
 }
