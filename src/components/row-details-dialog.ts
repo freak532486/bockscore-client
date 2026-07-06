@@ -110,7 +110,7 @@ export class RowDetailsDialog implements Component {
             /* Change score if applies */
             let newScore: number | undefined = undefined;
             const num = Number(inputScore.value);
-            if (!Number.isNaN(num)) {
+            if (!Number.isNaN(num) && num > 0 && num <= 10) {
                 newScore = num;
             }
 
@@ -140,14 +140,18 @@ export class RowDetailsDialog implements Component {
         const inputRowname = this.view.querySelector("#row-name-input") as HTMLInputElement;
         const inputScore = this.view.querySelector("#row-score-input") as HTMLInputElement;
         const imagePreview = this.view.querySelector("#image-preview") as HTMLImageElement;
+        const imagePreviewDiv = this.view.querySelector("#image-preview-div") as HTMLImageElement;
         const errMsg = this.view.querySelector("#image-err-msg") as HTMLElement;
 
         inputRowname.value = "";
         inputScore.value = "";
         errMsg.textContent = "";
         imagePreview.src = "";
+
+        this.imageData = undefined;
         
         errMsg.classList.add("d-none");
+        imagePreviewDiv.classList.add("d-none");
     }
 }
 
