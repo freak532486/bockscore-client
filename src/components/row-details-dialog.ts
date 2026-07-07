@@ -3,8 +3,10 @@ import type { Component } from "./component";
 import template from "./row-details-dialog.html"
 import * as bootstrap from "bootstrap"
 import "./row-details-dialog.css"
+import imageCompression from "browser-image-compression";
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const TARGET_IMAGE_SIZE = 200 * 1024; // 200KB
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export class RowDetailsDialog implements Component {
     public readonly view: HTMLElement;
@@ -28,21 +30,23 @@ export class RowDetailsDialog implements Component {
         /* Common update function for listeners */
         const updateFromFiles = async (files: Array<File>) => {
             for (const file of files) {
-                if (file.size > MAX_IMAGE_SIZE) {
-                    errMsg.classList.remove("d-none");
-                    errMsg.textContent = "Image is too large!";
-                    continue;
-                }
-
                 if (!file.type.startsWith("image/")) {
                     continue;
                 }
 
-                errMsg.classList.add("d-none");
-                this.imageData = new Blob([await file.bytes()], { "type": file.type });
-                const url = URL.createObjectURL(this.imageData);
-                imagePreview.src = url;
-                imagePreviewDiv.classList.remove("d-none");
+                const compressed = await compressImageFile(file);
+                const tooLarge = compressed.size > MAX_IMAGE_SIZE;
+                const imageSizeKb = Math.round(compressed.size / 1024);
+                errMsg.classList.remove("d-none");
+                errMsg.textContent = `Image Size: ${imageSizeKb}KB` + (tooLarge ? " (Too Large!)" : "");
+                errMsg.classList.toggle("text-danger", tooLarge);
+
+                if (!tooLarge) {
+                    this.imageData = new Blob([await compressed.bytes()], { "type": compressed.type });
+                    const url = URL.createObjectURL(this.imageData);
+                    imagePreview.src = url;
+                    imagePreviewDiv.classList.remove("d-none");
+                }
             }
         }
 
@@ -179,4 +183,14 @@ async function readClipboardFiles() {
     }
 
     return files;
+}
+
+async function compressImageFile(file: File)
+{
+    const compressedFile = await imageCompression(file, {
+        maxSizeMB: TARGET_IMAGE_SIZE / (1024 * 1024),
+        useWebWorker: true,
+    });
+
+    return compressedFile;
 }
