@@ -15,7 +15,7 @@ export class RankingAccess extends EventTarget
     public static readonly EVENT_TABLES_CHANGED = "tables_changed";
     public static readonly EVENT_MEMBERS_CHANGED = "members_changed";
 
-    private rankings: Array<Ranking> = [];
+    private rankings: Array<Ranking> | null = [];
     private tablesPerRanking: Map<string, Array<api.ScoreTableHeader>> = new Map();
     private tableIdToRankingId: Map<string, string> = new Map();
     private tableCache: Map<string, ScoreTableWrapper> = new Map();
@@ -100,7 +100,24 @@ export class RankingAccess extends EventTarget
 
     getAllRankings(): Promise<Array<Ranking>>
     {
-        return this.rankingLock.withLock(async () => this.rankings);
+        return this.rankingLock.withLock(async () => {
+            if (this.rankings !== null) {
+                return this.rankings;
+            }
+            
+            if (this.app.authToken.value == null) {
+                return [];
+            }
+
+            const res = await api.fetchAllRankings(this.app);
+            if (res == "error") {
+                return [];
+            }
+
+            this.rankings = res.map(x => ({ "id": x.id, "name": x.name }));
+            this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
+            return this.rankings;
+        });
     }
 
     /**
@@ -108,13 +125,17 @@ export class RankingAccess extends EventTarget
      */
     async addRanking(name: string): Promise<string | "error">
     {
+        if (this.rankings == null) {
+            return "error";
+        }
+
         return this.rankingLock.withLock(async () => {
             const res = await api.addRanking(this.app, name);
             if (res == "error") {
                 return "error";
             }
 
-            this.rankings.push({ "id": res, "name": name });
+            this.rankings!.push({ "id": res, "name": name });
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
             return res;
         });
@@ -122,6 +143,10 @@ export class RankingAccess extends EventTarget
 
     async deleteRanking(rankingId: string): Promise<"ok" | "error">
     {
+        if (this.rankings == null) {
+            return "error";
+        }
+
         return this.rankingLock.withLock(async () => {
             const res = await api.deleteRanking(this.app, rankingId);
             if (res == "error") {
@@ -132,7 +157,7 @@ export class RankingAccess extends EventTarget
                 this.tableIdToRankingId.delete(table.id);
             }
             this.tablesPerRanking.delete(rankingId);
-            this.rankings.splice(this.rankings.findIndex(x => x.id == rankingId), 1);
+            this.rankings!.splice(this.rankings!.findIndex(x => x.id == rankingId), 1);
 
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
             return "ok";
@@ -141,6 +166,10 @@ export class RankingAccess extends EventTarget
 
     async renameRanking(rankingId: string, name: string): Promise<"ok" | "error">
     {
+        if (this.rankings == null) {
+            return "error";
+        }
+
         const actualName = name.trim();
         if (actualName == "") {
             return "error";
@@ -152,8 +181,8 @@ export class RankingAccess extends EventTarget
                 return "error";
             }
 
-            this.rankings.splice(this.rankings.findIndex(x => x.id == rankingId), 1);
-            this.rankings.push({ "id": rankingId, "name": actualName });
+            this.rankings!.splice(this.rankings!.findIndex(x => x.id == rankingId), 1);
+            this.rankings!.push({ "id": rankingId, "name": actualName });
 
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
             return "ok";
@@ -224,18 +253,7 @@ export class RankingAccess extends EventTarget
                     this.tableCache.clear();
                     this.tableIdToRankingId.clear();
                     this.tablesPerRanking.clear();
-
-                    /* Fetch rankings for current user */
-                    if (this.app.authToken.value == null) {
-                        return;
-                    }
-
-                    const res = await api.fetchAllRankings(this.app);
-                    if (res == "error") {
-                        return;
-                    }
-
-                    this.rankings = res.map(x => ({ "id": x.id, "name": x.name }));
+                    this.rankings = null;
                 } finally {
                     this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
                 }

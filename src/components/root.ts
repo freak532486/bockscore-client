@@ -66,7 +66,7 @@ export class RootComponent implements Component
             }
         }
 
-        /* Other tabs become selectable as soon as there is an active tab */
+        /* Other tabs become selectable as soon as there is an active ranking */
         const makeTabsSelectable = async () => {
             let activeRankingExists = true;
             if (this.app.selectedRankingId.value == null) {
@@ -74,6 +74,7 @@ export class RootComponent implements Component
             }
 
             const allRankings = await this.app.rankingAccess.getAllRankings();
+            console.log("Updating tabs, rankings = " + allRankings);
             if (!allRankings.find(x => x.id == this.app.selectedRankingId.value)) {
                 activeRankingExists = false;
             }
