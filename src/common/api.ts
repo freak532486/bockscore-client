@@ -18,12 +18,8 @@ export interface LoginResponse
  */
 export async function login(app: App, request: LoginRequest): Promise<"ok" | "bad_credentials" | "error">
 {
-    const response = await fetch("/api/auth/login", {
+    const response = await basicFetch(app, "/api/auth/login", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify(request)
     });
 
@@ -55,12 +51,8 @@ export interface RegisterRequest
 
 export async function register(app: App, request: RegisterRequest): Promise<"ok" | "user_exists" | "error">
 {
-    const response = await fetch("/api/auth/register", {
+    const response = await basicFetch(app, "/api/auth/register", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify(request)
     });
 
@@ -84,12 +76,8 @@ interface LogoutResponse {
  */
 export async function logout(app: App): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
+    const response = await basicFetch(app, "/api/auth/logout", {
+        method: "POST"
     });
 
     if (!response.ok) {
@@ -111,12 +99,8 @@ export async function logout(app: App): Promise<"ok" | "error">
  */
 export async function signin(app: App): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
+    const response = await basicFetch(app, "/api/auth/signin", {
+        method: "POST"
     });
 
     if (!response.ok) {
@@ -136,13 +120,8 @@ export async function signin(app: App): Promise<"ok" | "error">
 
 export async function deleteUser(app: App, password: string): Promise<"ok" | "bad_password" | "error">
 {
-    const response = await fetch("/api/user/delete", {
+    const response = await authFetch(app, "/api/user/delete", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify({
             "password": password
         })
@@ -164,13 +143,8 @@ export interface RankingResponse
 
 export async function fetchAllRankings(app: App): Promise<Array<RankingResponse> | "error">
 {
-    const response = await fetch("/api/ranking", {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
+    const response = await authFetch(app, "/api/ranking", {
+        method: "GET"
     });
 
     if (!response.ok) {
@@ -185,13 +159,8 @@ export async function fetchAllRankings(app: App): Promise<Array<RankingResponse>
  */
 export async function addRanking(app: App, name: string): Promise<string | "error">
 {
-    const response = await fetch("/api/ranking", {
+    const response = await authFetch(app, "/api/ranking", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify({ "name": name })
     });
 
@@ -207,13 +176,9 @@ export async function addRanking(app: App, name: string): Promise<string | "erro
  */
 export async function deleteRanking(app: App, rankingId: string): Promise<"ok" | "error">
 {
-    const response = await fetch(
+    const response = await authFetch(app,
         "/api/ranking/" + rankingId, {
-        method: "DELETE",
-        headers: {
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
+        method: "DELETE"
     });
 
     return response.ok ? "ok" : "error";
@@ -224,14 +189,9 @@ export async function deleteRanking(app: App, rankingId: string): Promise<"ok" |
  */
 export async function renameRanking(app: App, rankingId: string, name: string): Promise<"ok" | "error">
 {
-    const response = await fetch(
+    const response = await authFetch(app,
         "/api/ranking/" + rankingId, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify({ "name": name })
     });
 
@@ -243,11 +203,8 @@ export async function renameRanking(app: App, rankingId: string, name: string): 
  */
 export async function updateXsrfToken(app: App): Promise<"ok" | "error">
 {
-    await fetch("/api/auth/xsrf-token", {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json"
-        }
+    await basicFetch(app, "/api/auth/xsrf-token", {
+        method: "GET"
     });
 
     const csrfCookie = getCookie("bockscore.x-csrf-token");
@@ -272,13 +229,8 @@ interface UserInfo
 
 async function updateUserInfo(app: App): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/user", {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
+    const response = await authFetch(app, "/api/user", {
+        method: "GET"
     });
 
     if (!response.ok) {
@@ -304,13 +256,8 @@ export interface ScoreTableHeader
  */
 export async function fetchTablesForRanking(app: App, rankingId: string): Promise<Array<ScoreTableHeader> | "error">
 {
-    const response = await fetch("/api/scoreTable?rankingId=" + rankingId, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
+    const response = await authFetch(app, "/api/scoreTable?rankingId=" + rankingId, {
+        method: "GET"
     });
 
     if (!response.ok) {
@@ -327,13 +274,8 @@ export async function createTable(app: App, rankingId: string, name: string): Pr
 {
     const defaultScoringType: ScoringType = "Magic";
 
-    const response = await fetch("/api/scoreTable", {
+    const response = await authFetch(app, "/api/scoreTable", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify({
             "name": name,
             "rankingId": rankingId,
@@ -359,13 +301,8 @@ export interface TableSettings
  */
 export async function updateTableSettings(app: App, tableId: string, settings: TableSettings): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/scoreTable/" + tableId, {
+    const response = await authFetch(app, "/api/scoreTable/" + tableId, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify({
             "name": settings.name,
             "scoring": settings.scoring
@@ -388,13 +325,8 @@ export interface MemberInfo
  */
 export async function fetchMembersForRanking(app: App, rankingId: string): Promise<Array<MemberInfo> | "error">
 {
-    const response = await fetch("/api/member?rankingId=" + rankingId, {
+    const response = await authFetch(app, "/api/member?rankingId=" + rankingId, {
         method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
     });
 
     if (!response.ok) {
@@ -406,13 +338,8 @@ export async function fetchMembersForRanking(app: App, rankingId: string): Promi
 
 export async function inviteMember(app: App, rankingId: string, name: string): Promise<MemberInfo | "user_not_found" | "error">
 {
-    const response = await fetch("/api/member/" + rankingId + "/invite", {
+    const response = await authFetch(app, "/api/member/" + rankingId + "/invite", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         body: JSON.stringify({ "name": name })
     });
 
@@ -439,13 +366,8 @@ export interface ScoreTableRow
 
 export async function fetchScoreTableRows(app: App, tableId: string): Promise<Array<ScoreTableRow> | "error">
 {
-    const response = await fetch("/api/scoreTableEntry?scoreTableId=" + tableId, {
+    const response = await authFetch(app, "/api/scoreTableEntry?scoreTableId=" + tableId, {
         method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
     });
 
     if (!response.ok) {
@@ -468,13 +390,8 @@ export async function fetchUserScores(app: App, userIds: Array<string>): Promise
         "memberIds": userIds
     };
 
-    const response = await fetch("/api/userscore/findMultiple", {
+    const response = await authFetch(app, "/api/userscore/findMultiple", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         "body": JSON.stringify(request)
     });
 
@@ -487,14 +404,9 @@ export async function fetchUserScores(app: App, userIds: Array<string>): Promise
 
 export async function createScore(app: App, entryId: string, memberId: string, value: number): Promise<string | "error">
 {
-    const response = await fetch(
+    const response = await authFetch(app, 
         `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         "body": JSON.stringify({
             "value": value
         })
@@ -510,14 +422,9 @@ export async function createScore(app: App, entryId: string, memberId: string, v
 
 export async function setScore(app: App, entryId: string, memberId: string, value: number): Promise<"ok" | "error">
 {
-    const response = await fetch(
+    const response = await authFetch(app,
         `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         "body": JSON.stringify({
             "value": value
         })
@@ -531,13 +438,8 @@ export async function setScore(app: App, entryId: string, memberId: string, valu
  */
 export async function addRow(app: App, tableId: string, name: string): Promise<string | "error">
 {
-    const response = await fetch("/api/scoreTableEntry", {
+    const response = await authFetch(app, "/api/scoreTableEntry", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         "body": JSON.stringify({ "scoreTableId": tableId, "name": name })
     });
 
@@ -550,13 +452,8 @@ export async function addRow(app: App, tableId: string, name: string): Promise<s
 
 export async function deleteRow(app: App, entryId: string): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/scoreTableEntry/" + entryId, {
+    const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
         method: "DELETE",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
     });
 
     return response.ok ? "ok" : "error";
@@ -564,13 +461,8 @@ export async function deleteRow(app: App, entryId: string): Promise<"ok" | "erro
 
 export async function renameRow(app: App, entryId: string, newName: string): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/scoreTableEntry/" + entryId, {
+    const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        },
         "body": JSON.stringify({ "name": newName })
     });
 
@@ -582,12 +474,8 @@ export async function renameRow(app: App, entryId: string, newName: string): Pro
  */
 export async function getEntryImage(app: App, entryId: string): Promise<Blob | "not_found" | "error">
 {
-    const response = await fetch("/api/scoreTableEntry/" + entryId + "/image", {
-        method: "GET",
-        headers: {
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || ""
-        }
+    const response = await authFetch(app, "/api/scoreTableEntry/" + entryId + "/image", {
+        method: "GET"
     });
 
     if (response.status == 404) {
@@ -612,15 +500,63 @@ export async function setEntryImage(
     image: Blob
 ): Promise<"ok" | "error">
 {
-    const response = await fetch("/api/scoreTableEntry/" + entryId + "/image", {
+    const response = await authFetch(app, "/api/scoreTableEntry/" + entryId + "/image", {
         method: "PUT",
         headers: {
-            "Authorization": "Bearer " + app.authToken.value || "",
-            "x-csrf-token": app.csrfToken.value || "",
             "Content-Type": image.type
         },
         body: image
     });
 
     return response.ok ? "ok" : "error";
+}
+
+async function authFetch(app: App, resource: string, options: RequestInit): Promise<Response>
+{
+    /* Add auth token header */
+    const headers = new Headers(options.headers);
+
+    if (app.authToken.value) {
+        headers.set("Authorization", `Bearer ${app.authToken.value}`);
+    }
+
+    /* First attempt */
+    const res1 = await basicFetch(app, resource, {
+        ...options,
+        headers
+    });
+
+    if (res1.status !== 401) {
+        return res1;
+    }
+
+    /* Token refresh, then try again */
+    const signinRes = await signin(app);
+    if (signinRes == "error") {
+        return res1;
+    }
+
+    /* Second attempt */
+    return basicFetch(app, resource, {
+        ...options,
+        headers
+    });
+}
+
+async function basicFetch(app: App, resource: string, options: RequestInit)
+{
+    /* Add basic headers */
+    const headers = new Headers(options.headers);
+
+    if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+    }
+
+    headers.set("x-csrf-token", app.csrfToken.value || "");
+
+    /* Do the fetch */
+    return fetch(resource, {
+        ...options,
+        headers
+    });
 }
