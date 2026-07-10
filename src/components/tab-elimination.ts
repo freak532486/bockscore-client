@@ -1,10 +1,10 @@
-import template from "./tab-elimination.html"
+import * as api from "../common/api";
 import type { App } from "../common/app";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import { TabEliminationCardComponent } from "./tab-elimination-card";
 import { EliminationImportDialog, type EliminationImportSettings } from "./elimination-import-dialog";
-import * as api from "../common/api"
+import { TabEliminationCardComponent } from "./tab-elimination-card";
+import template from "./tab-elimination.html";
 
 export class EliminationTabComponent implements Component
 {
@@ -39,14 +39,7 @@ export class EliminationTabComponent implements Component
         }
 
         app.selectedRankingId.subscribe(() => syncWithServer());
-        app.sseHandler.subscribe("elimination_changed", data => {
-            const rankingId = (data?.rankingId || null) as string | null;
-            if (rankingId !== app.selectedRankingId.value) {
-                return;
-            }
-
-            syncWithServer();
-        });
+        app.sseHandler.subscribe("elimination_changed", () => syncWithServer());
 
         /* Make import button work */
         const btnImport = this.view.querySelector("#btn-elimination-import") as HTMLButtonElement;

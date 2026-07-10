@@ -18,7 +18,7 @@ export class App
     public selectedRankingId = new Observable<string | null>(null);
     public selectedTableId = new Observable<string | null>(null);
 
-    public sseHandler: SSEHandler = new SSEHandler();
+    public sseHandler: SSEHandler = new SSEHandler(this);
     public rankingAccess: RankingAccess = new RankingAccess(this);
 
     public errorDialog: ErrorDialogComponent = new ErrorDialogComponent();

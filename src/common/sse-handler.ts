@@ -1,3 +1,5 @@
+import type { App } from "./app";
+
 interface SSEEvent
 {
     type: string,
@@ -8,23 +10,42 @@ export type SSECallback = (data?: any) => void;
 
 export class SSEHandler
 {
-    private readonly eventSource: EventSource;
+    private eventSource: EventSource | undefined;
     private handlers: Map<string, Set<SSECallback>> = new Map();
 
-    constructor() {
-        this.eventSource = new EventSource("/api/events");
-        this.eventSource.onmessage = (event) => {
-            const message = JSON.parse(event.data) as SSEEvent;
+    constructor(app: App) {
+        const subscribeToEventSource = (rankingId: string) => {
+            if (this.eventSource !== undefined) {
+                this.eventSource.close();
+                this.eventSource = undefined;
+            }
 
-            const handlers = this.handlers.get(message.type);
-            if (!handlers) {
+            this.eventSource = new EventSource("/api/ranking/" + rankingId + "/events");
+            this.eventSource.onmessage = (event) => {
+                const message = JSON.parse(event.data) as SSEEvent;
+
+                const handlers = this.handlers.get(message.type);
+                if (!handlers) {
+                    return;
+                }
+
+                for (const handler of handlers) {
+                    handler(message.data);
+                }
+            };
+        }
+
+        app.selectedRankingId.subscribe((val, prev) => {
+            if (val == null && this.eventSource !== undefined) {
+                this.eventSource.close();
+                this.eventSource = undefined;
                 return;
             }
 
-            for (const handler of handlers) {
-                handler(message.data);
+            if (val !== null) {
+                subscribeToEventSource(val);
             }
-        };
+        });
     }
 
     /**
