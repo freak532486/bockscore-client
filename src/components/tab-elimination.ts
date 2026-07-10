@@ -4,20 +4,39 @@ import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { TabEliminationCardComponent } from "./tab-elimination-card";
 import { EliminationImportDialog, type EliminationImportSettings } from "./elimination-import-dialog";
+import * as api from "../common/api"
 
 export class EliminationTabComponent implements Component
 {
     public readonly view: HTMLElement;
     private readonly importDialog = new EliminationImportDialog();
 
-    private originalNumEntries: number = 0;
-    private _entries: Array<string>;
+    private _entries: Array<api.EliminationEntry>;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         document.body.appendChild(this.importDialog.view);
 
+        /* Fetch state from API */
         this._entries = [];
+        app.selectedRankingId.subscribe(async (val, _) => {
+            this._entries = [];
+
+            if (val == null) {
+                this.updateView();
+                return;
+            }
+
+            const res = await api.getEliminationTable(app, val);
+            if (res == "error") {
+                app.errorDialog.showError("There was an error fetching elimination list from server.");
+                this.updateView();
+                return;
+            }
+
+            this._entries = res;
+            this.updateView();
+        })
 
         /* Make import button work */
         const btnImport = this.view.querySelector("#btn-elimination-import") as HTMLButtonElement;
@@ -27,7 +46,7 @@ export class EliminationTabComponent implements Component
     private async performImport(settings: EliminationImportSettings)
     {
         /* Perform the random selection */
-        const result: Array<string> = [];
+        const result: Array<Entry> = [];
 
         if (this.app.selectedRankingId.value == null) {
             return;
@@ -43,8 +62,10 @@ export class EliminationTabComponent implements Component
             const entries = [];
             for (const row of table.rows) {
                 entries.push({
+                    "id": row.id,
                     "name": row.name,
-                    "score": settings.weightedImport ? (row.getAvgScore(table.header.scoreMode) || 0) : 1
+                    "score": settings.weightedImport ? (row.getAvgScore(table.header.scoreMode) || 0) : 1,
+                    "markedOff": false
                 });
             }
 
@@ -53,9 +74,27 @@ export class EliminationTabComponent implements Component
         }
 
         /* Sort by name */
-        result.sort();
+        result.sort((a, b) => a.name.localeCompare(b.name));
+
+        /* Update using API */
+        const apiResponse = await api.updateEliminationTable(this.app, this.app.selectedRankingId.value, result.map(x => x.id));
+        if (apiResponse == "error") {
+            this.app.errorDialog.showError("An error occured while updating the elimination list.");
+            return;
+        }
+
+        /* Update state */
+        this._entries = result.map(x => ({
+            entryId: x.id,
+            markedOff: x.markedOff
+        }));
 
         /* Update view */
+        await this.updateView();
+    }
+
+    private async updateView()
+    {
         const games = this.view.querySelector(".games") as HTMLElement;
         games.replaceChildren();
 
@@ -63,25 +102,53 @@ export class EliminationTabComponent implements Component
         const spanCurrent = this.view.querySelector("#num-current") as HTMLElement;
         const spanTotal = this.view.querySelector("#num-total") as HTMLElement;
 
-        for (const entry of result) {
-            games.appendChild(new TabEliminationCardComponent(entry, () => {
-                /* Update remaining view */
-                const numCurrent = games.children.length;
-                spanCurrent.textContent = String(numCurrent);
-                spanRemaining.classList.toggle("text-danger", numCurrent > this.originalNumEntries / 2);
-                spanRemaining.classList.toggle("text-success", numCurrent <= this.originalNumEntries / 2);
+        if (this.app.selectedRankingId.value == null) {
+            spanRemaining.classList.add("invisible");
+            return;
+        }
+
+        let current = 0;
+        let total = 0;
+        spanRemaining.classList.toggle("invisible", this._entries.length == 0);
+        for (const entry of this._entries) {
+            total += 1;
+            if (entry.markedOff) {
+                continue;
+            }
+
+            current += 1;
+            const row = await this.app.rankingAccess.getEntry(this.app.selectedRankingId.value, entry.entryId);
+            if (row == null) {
+                continue;
+            }
+
+            games.appendChild(new TabEliminationCardComponent(row.name, async () => {
+                if (this.app.selectedRankingId.value === null) {
+                    this.app.errorDialog.showError("No ranking is active.");
+                    return;
+                }
+
+                /* Mark off using API */
+                const res = await api.markOffEliminationEntry(this.app, this.app.selectedRankingId.value, entry.entryId);
+                if (res == "error") {
+                    this.app.errorDialog.showError("An error occured while syncing elimination list state to server.");
+                    return;
+                }
 
                 /* Update state */
-                this._entries.splice(this._entries.findIndex(x => x == entry), 1);
+                this._entries.splice(this._entries.findIndex(x => x.entryId == entry.entryId), 1, {
+                    entryId: entry.entryId,
+                    markedOff: true
+                });
+
+                this.updateView();
             }).view);
         }
 
-        spanRemaining.classList.remove("invisible");
-        spanRemaining.classList.toggle("text-danger", true);
-        this._entries = result;
-        this.originalNumEntries = result.length;
-        spanCurrent.textContent = String(this.originalNumEntries);
-        spanTotal.textContent = String(this.originalNumEntries);
+        spanRemaining.classList.toggle("text-danger", current > total / 2);
+        spanRemaining.classList.toggle("text-success", current <= total / 2);
+        spanCurrent.textContent = String(current);
+        spanTotal.textContent = String(total);
     }
 
     get entries() {
@@ -91,14 +158,16 @@ export class EliminationTabComponent implements Component
 
 interface Entry
 {
+    id: string,
     name: string,
-    score: number
+    score: number,
+    markedOff: boolean
 }
 
-function weightedRandomSelection(entries: Array<Entry>, n: number): Array<string>
+function weightedRandomSelection(entries: Array<Entry>, n: number): Array<Entry>
 {
     const pool = [...entries];
-    const result: string[] = [];
+    const result: Array<Entry> = [];
 
     n = Math.min(n, pool.length);
 
@@ -112,7 +181,7 @@ function weightedRandomSelection(entries: Array<Entry>, n: number): Array<string
             const weight = pool[j]!.score;
 
             if (r < weight) {
-                result.push(key);
+                result.push(pool[j]!);
                 pool.splice(j, 1); // Remove so it can't be selected again
                 break;
             }
