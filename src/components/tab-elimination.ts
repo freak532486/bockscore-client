@@ -19,15 +19,15 @@ export class EliminationTabComponent implements Component
 
         /* Fetch state from API */
         this._entries = [];
-        app.selectedRankingId.subscribe(async (val, _) => {
+        const syncWithServer = async () => {
             this._entries = [];
 
-            if (val == null) {
+            if (this.app.selectedRankingId.value == null) {
                 this.updateView();
                 return;
             }
 
-            const res = await api.getEliminationTable(app, val);
+            const res = await api.getEliminationTable(app, this.app.selectedRankingId.value);
             if (res == "error") {
                 app.errorDialog.showError("There was an error fetching elimination list from server.");
                 this.updateView();
@@ -36,7 +36,17 @@ export class EliminationTabComponent implements Component
 
             this._entries = res;
             this.updateView();
-        })
+        }
+
+        app.selectedRankingId.subscribe(() => syncWithServer());
+        app.sseHandler.subscribe("elimination_changed", data => {
+            const rankingId = (data?.rankingId || null) as string | null;
+            if (rankingId !== app.selectedRankingId.value) {
+                return;
+            }
+
+            syncWithServer();
+        });
 
         /* Make import button work */
         const btnImport = this.view.querySelector("#btn-elimination-import") as HTMLButtonElement;
@@ -82,15 +92,6 @@ export class EliminationTabComponent implements Component
             this.app.errorDialog.showError("An error occured while updating the elimination list.");
             return;
         }
-
-        /* Update state */
-        this._entries = result.map(x => ({
-            entryId: x.id,
-            markedOff: x.markedOff
-        }));
-
-        /* Update view */
-        await this.updateView();
     }
 
     private async updateView()
@@ -134,14 +135,6 @@ export class EliminationTabComponent implements Component
                     this.app.errorDialog.showError("An error occured while syncing elimination list state to server.");
                     return;
                 }
-
-                /* Update state */
-                this._entries.splice(this._entries.findIndex(x => x.entryId == entry.entryId), 1, {
-                    entryId: entry.entryId,
-                    markedOff: true
-                });
-
-                this.updateView();
             }).view);
         }
 
