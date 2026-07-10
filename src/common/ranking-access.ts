@@ -1,5 +1,5 @@
 import type { App } from "./app";
-import { ScoreTableWrapper } from "./table-wrapper";
+import { ScoreTableRowWrapper, ScoreTableWrapper } from "./table-wrapper";
 import * as api from "./api"
 import { Mutex } from "./mutex";
 
@@ -20,6 +20,7 @@ export class RankingAccess extends EventTarget
     private tableIdToRankingId: Map<string, string> = new Map();
     private tableCache: Map<string, ScoreTableWrapper> = new Map();
     private membersPerRanking: Map<string, Array<api.MemberInfo>> = new Map();
+    private tableEntryCache: Map<string, ScoreTableRowWrapper> = new Map();
 
     private rankingLock = new Mutex();
     private tableCacheLock = new Mutex();
@@ -94,6 +95,10 @@ export class RankingAccess extends EventTarget
             }
 
             this.tableCache.set(tableId, table);
+            for (const row of table.rows) {
+                this.tableEntryCache.set(row.id, row);
+            }
+
             return table;
         });
     }
@@ -241,6 +246,18 @@ export class RankingAccess extends EventTarget
         this.membersPerRanking.get(rankingId)!.push(res);
         this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_MEMBERS_CHANGED, { detail: rankingId }));
         return res;
+    }
+
+    async getEntry(rankingId: string, entryId: string): Promise<ScoreTableRowWrapper | null>
+    {
+        /* Load all tables of the ranking */
+        const tables = await this.getAllTablesForRanking(rankingId);
+        for (const table of tables) {
+            await this.getTable(table.id);
+        }
+
+        /* Now the entry cache is filled */
+        return this.tableEntryCache.get(entryId) || null;
     }
 
     private async invalidateCache()

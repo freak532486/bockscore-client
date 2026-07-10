@@ -511,6 +511,70 @@ export async function setEntryImage(
     return response.ok ? "ok" : "error";
 }
 
+export interface EliminationEntry
+{
+    entryId: string,
+    markedOff: boolean
+}
+
+export async function getEliminationTable
+(
+    app: App,
+    rankingId: string
+): Promise<Array<EliminationEntry> | "error">
+{
+    const res = await authFetch(
+        app,
+        "/api/ranking/" + rankingId + "/elimination",
+        {
+            method: "GET"
+        }
+    );
+
+    if (!res.ok) {
+        return "error";
+    }
+
+    return (await res.json()).entries as Array<EliminationEntry>
+}
+
+export async function updateEliminationTable(
+    app: App,
+    rankingId: string,
+    entryIds: Array<string>
+): Promise<"ok" | "error">
+{
+    const res = await authFetch(
+        app,
+        "/api/ranking/" + rankingId + "/elimination",
+        {
+            method: "PUT",
+            body: JSON.stringify({
+                ids: entryIds
+            })
+        }
+    );
+
+    return res.ok ? "ok" : "error";
+}
+
+export async function markOffEliminationEntry(
+    app: App,
+    rankingId: string,
+    entryId: string
+): Promise<"ok" | "error">
+{
+    const res = await authFetch(
+        app,
+        "/api/ranking/" + rankingId + "/elimination/" + entryId,
+        {
+            method: "POST"
+        }
+    );
+
+    return res.ok ? "ok" : "error";
+}
+
 async function authFetch(app: App, resource: string, options: RequestInit): Promise<Response>
 {
     /* Add auth token header */
