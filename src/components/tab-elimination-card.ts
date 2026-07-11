@@ -1,7 +1,8 @@
-import template from "./tab-elimination-card.html"
-import "./tab-elimination-card.css"
-import type { Component } from "./component"
+import type { ScoreTableRowWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
+import type { Component } from "./component";
+import "./tab-elimination-card.css";
+import template from "./tab-elimination-card.html";
 
 const TIME_UNTIL_DELETION_MS = 1000; // Keep in sync with CSS
 
@@ -11,14 +12,22 @@ export class TabEliminationCardComponent implements Component
     private deletionTimer?: number;
 
     constructor(
-        private readonly name: string,
+        private readonly row: ScoreTableRowWrapper,
         private readonly onDelete: () => void
     ) {
         this.view = htmlToElement(template);
 
         /* Replace name */
         const gameNameSpan = this.view.querySelector(".game-name") as HTMLElement;
-        gameNameSpan.textContent = name;
+        gameNameSpan.textContent = row.name;
+
+        /* Replace image */
+        const domImg = this.view.querySelector("img") as HTMLImageElement;
+        const img = row.image;
+        if (img !== undefined) {
+            const url = URL.createObjectURL(img);
+            domImg.src = url;
+        }
 
         /* Delete after pressing down for five seconds */
         const progress = this.view.querySelector(".hold-progress") as HTMLElement;

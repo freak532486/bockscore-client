@@ -116,7 +116,7 @@ export class EliminationTabComponent implements Component
                 continue;
             }
 
-            games.appendChild(new TabEliminationCardComponent(row.name, async () => {
+            games.appendChild(new TabEliminationCardComponent(row, async () => {
                 if (this.app.selectedRankingId.value === null) {
                     this.app.errorDialog.showError("No ranking is active.");
                     return;
