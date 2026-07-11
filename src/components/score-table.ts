@@ -2,7 +2,7 @@ import type { App } from "../common/app";
 import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import { RowDetailsDialog } from "./row-details-dialog";
+import { RowDetailsDialog, type EntryUpdateCallback } from "./row-details-dialog";
 import "./score-table.entry.css";
 import entry from "./score-table.entry.html";
 import template from "./score-table.html";
@@ -38,11 +38,12 @@ export class MobileScoreTableComponent implements Component
         for (const row of this.wrapper.rows) {
             const entry = this.createEntry(
                 row,
-                async (newScore, newRowname, newImage) => {
+                async (newScore, newRowname, newImage, newJoker) => {
                     const scoreChanged = newScore == undefined ? false : await row.setScore(newScore);
                     const nameChanged = newRowname == undefined ? false : await row.setName(newRowname);
                     const imageChanged = newImage == undefined ? false : await row.setImage(newImage);
-                    if (scoreChanged || nameChanged || imageChanged) {
+                    const jokerChanged = newJoker == undefined ? false : await this.wrapper.setJoker(newJoker, row.id);
+                    if (scoreChanged || nameChanged || imageChanged || jokerChanged) {
                         this.refresh();
                     }
                 },
@@ -61,7 +62,7 @@ export class MobileScoreTableComponent implements Component
 
     private createEntry(
         row: ScoreTableRowWrapper,
-        update: (score?: number, name?: string, image?: Blob) => void,
+        update: EntryUpdateCallback,
         deleteRow: () => void
     ): HTMLElement
     {

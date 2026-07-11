@@ -1,14 +1,14 @@
+import { Modal } from "bootstrap";
+import * as api from "../common/api";
 import type { App } from "../common/app";
+import { ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./tab-rankings.html"
-import templateTableSettingsDialog from "./tab-rankings.table-settings-dialog.html"
-import { MobileScoreTableComponent } from "./score-table";
-import { RowDetailsDialog } from "./row-details-dialog";
-import { Modal } from "bootstrap";
 import { InputDialog } from "./input-dialog";
-import * as api from "../common/api"
-import { ScoreTableWrapper } from "../common/table-wrapper";
+import { RowDetailsDialog } from "./row-details-dialog";
+import { MobileScoreTableComponent } from "./score-table";
+import template from "./tab-rankings.html";
+import templateTableSettingsDialog from "./tab-rankings.table-settings-dialog.html";
 
 export class RankingsTabComponent implements Component
 {
@@ -16,7 +16,7 @@ export class RankingsTabComponent implements Component
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
-        const detailDialog = new RowDetailsDialog();
+        const detailDialog = new RowDetailsDialog(app);
         document.body.appendChild(detailDialog.view);
 
         /* Update tables whenever ranking selection changes */

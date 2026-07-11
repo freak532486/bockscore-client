@@ -469,6 +469,16 @@ export async function renameRow(app: App, entryId: string, newName: string): Pro
     return response.ok ? "ok" : "error";
 }
 
+export async function setEntryJokerMember(app: App, entryId: string, memberId: string): Promise<"ok" | "error">
+{
+    const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
+        method: "PUT",
+        "body": JSON.stringify({ "jokerMemberId": memberId })
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
 /**
  * Returns the saved image for the given entry.
  */

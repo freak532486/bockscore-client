@@ -23,7 +23,7 @@ export class TabEliminationCardComponent implements Component {
 
         const jokerTextSpan = this.view.querySelector(".joker-text") as HTMLElement;
         jokerTextSpan.classList.toggle("d-none", row.jokerOf === null);
-        jokerTextSpan.textContent = row.jokerOf === null ? "" : (`Joker of ${row.jokerOf.name}`);
+        jokerTextSpan.textContent = row.jokerOf === null ? "" : (`Joker: ${row.jokerOf.name}`);
 
         card.classList.toggle("joker", row.jokerOf !== null);
         (this.view.querySelector(".joker-lock") as HTMLElement).classList.toggle("invisible", row.jokerOf === null);
