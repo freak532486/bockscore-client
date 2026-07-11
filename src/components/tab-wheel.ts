@@ -1,10 +1,10 @@
-import template from "./tab-wheel.html";
-import dialogTemplate from "./tab-wheel.dialog.html"
+import { Modal } from "bootstrap";
 import type { App } from "../common/app";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
+import dialogTemplate from "./tab-wheel.dialog.html";
+import template from "./tab-wheel.html";
 import { WheelComponent } from "./wheel";
-import { Modal } from "bootstrap";
 
 const INITIAL_ENTRIES = [
     "Apple",
@@ -14,8 +14,7 @@ const INITIAL_ENTRIES = [
     "Elderberries"
 ];
 
-export class WheelTabComponent implements Component
-{
+export class WheelTabComponent implements Component {
     public readonly view;
     private modal: Modal;
 
@@ -44,10 +43,12 @@ export class WheelTabComponent implements Component
 
         /* Spin and remove entry on button click */
         const onWin = (entry: string) => {
+            const sndApplause = this.view.querySelector("#snd-applause") as HTMLAudioElement;
             const winnerSpan = dialogView.querySelector("#wheel-dialog-winner") as HTMLSpanElement;
             winnerSpan.textContent = entry;
 
             this.modal.show();
+            sndApplause.play();
 
             (dialogView.querySelector("#btn-wheel-remove") as HTMLButtonElement).onclick = () => {
                 onClose();
@@ -67,9 +68,42 @@ export class WheelTabComponent implements Component
 
         /* Make import button work */
         const btnImport = this.view.querySelector("#btn-wheel-import") as HTMLButtonElement;
-        btnImport.onclick = () => {
-            wheel.entries = app.tabElimination.entries;
+        btnImport.onclick = async () => {
+            if (app.selectedRankingId.value == null) {
+                app.errorDialog.showError("No ranking is active");
+                return;
+            }
+
+            const names: Array<string> = [];
+            for (const entry of app.tabElimination.entries) {
+                const row = await app.rankingAccess.getEntry(app.selectedRankingId.value, entry.entryId);
+                if (row == null) {
+                    continue;
+                }
+
+                names.push(row?.name);
+            }
+
+            wheel.entries = names;
             textarea.value = wheel.entries.join("\n");
         }
+
+        /* Make shuffle button work */
+        const btnShuffle = this.view.querySelector("#btn-shuffle") as HTMLButtonElement;
+        btnShuffle.onclick = () => {
+            const entries = [...wheel.entries];
+            shuffle(entries);
+            wheel.entries = entries;
+            textarea.value = entries.join("\n");
+        }
+    }
+}
+
+function shuffle<T>(array: Array<T>): void {
+    let currentIndex = array.length;
+    while (currentIndex != 0) {
+        let randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex]!, array[currentIndex]!];
     }
 }

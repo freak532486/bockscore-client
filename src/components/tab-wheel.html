@@ -4,8 +4,12 @@
     <div class="mb-3">
         <div class="d-flex flex-row justify-content-between align-items-end m-2">
             <label for="wheel-textarea" class="form-label">Wheel entries</label>
-            <button id="btn-wheel-import" class="btn btn-primary">Import from elimination</button>
+            <div class="d-flex flex-row gap-2">
+                <button id="btn-shuffle" class="btn btn-secondary"><i class="bi bi-shuffle"></i></button>
+                <button id="btn-wheel-import" class="btn btn-primary">Import from elimination</button>
+            </div>
         </div>
         <textarea class="form-control" id="wheel-textarea" rows="20"></textarea>
     </div>
+    <audio id="snd-applause" src="/sounds/applause.mp3" type="audio/mpeg"></audio>
 </div>

@@ -103,7 +103,6 @@ export class EliminationTabComponent implements Component
 
         let current = 0;
         let total = 0;
-        spanRemaining.classList.toggle("invisible", this._entries.length == 0);
         for (const entry of this._entries) {
             total += 1;
             if (entry.markedOff) {
@@ -116,7 +115,7 @@ export class EliminationTabComponent implements Component
                 continue;
             }
 
-            games.appendChild(new TabEliminationCardComponent(row.name, async () => {
+            games.appendChild(new TabEliminationCardComponent(row, async () => {
                 if (this.app.selectedRankingId.value === null) {
                     this.app.errorDialog.showError("No ranking is active.");
                     return;
@@ -131,6 +130,7 @@ export class EliminationTabComponent implements Component
             }).view);
         }
 
+        spanRemaining.classList.toggle("invisible", this._entries.length == 0);
         spanRemaining.classList.toggle("text-danger", current > total / 2);
         spanRemaining.classList.toggle("text-success", current <= total / 2);
         spanCurrent.textContent = String(current);
