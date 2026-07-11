@@ -25,9 +25,9 @@ const WHEEL_TEXT_COLORS = [
 const WHEEL_MAX_ENTRY_LENGTH = 25;
 const SPIN_SPEED_IDLE = 20; // degrees per second
 
-const SPIN_TIME_SECONDS = 10;
+const SPIN_TIME_SECONDS = 20;
 const WIN_EVENT_DELAY_SECONDS = 0.5;
-const NUM_SPINS = 10;
+const NUM_SPINS = 20;
 
 interface Spin
 {
