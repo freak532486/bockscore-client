@@ -1,5 +1,6 @@
 import * as api from "../common/api";
 import type { App } from "../common/app";
+import { ScoreTableRowWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { EliminationImportDialog, type EliminationImportSettings } from "./elimination-import-dialog";
@@ -62,22 +63,27 @@ export class EliminationTabComponent implements Component
                 continue;
             }
 
-            const entries = [];
+            const jokers: Array<Entry> = [];
+            const nonJokers: Array<Entry> = [];
             for (const row of table.rows) {
-                entries.push({
+                const entry: Entry = {
                     "id": row.id,
                     "name": row.name,
                     "score": settings.weightedImport ? (row.getAvgScore(table.header.scoreMode) || 0) : 1,
-                    "markedOff": false
-                });
+                    "markedOff": false,
+                    "isJoker": row.jokerOf !== null
+                }
+
+                if (row.jokerOf !== null) {
+                    jokers.push(entry);
+                } else {
+                    nonJokers.push(entry);
+                }
             }
 
-            const selection = weightedRandomSelection(entries, settings.entriesPerTable);
-            result.push(...selection);
+            const selection = weightedRandomSelection(nonJokers, Math.max(0, settings.entriesPerTable - jokers.length));
+            result.push(...jokers, ...selection);
         }
-
-        /* Sort by name */
-        result.sort((a, b) => a.name.localeCompare(b.name));
 
         /* Update using API */
         const apiResponse = await api.updateEliminationTable(this.app, this.app.selectedRankingId.value, result.map(x => x.id));
@@ -101,20 +107,42 @@ export class EliminationTabComponent implements Component
             return;
         }
 
+        /* Sort entries */
+        interface SortedEntry {
+            row: ScoreTableRowWrapper;
+            markedOff: boolean;
+        };
+
+        const sorted: Array<SortedEntry> = [];
+        for (const apiEntry of this._entries) {
+            const entry = await this.app.rankingAccess.getEntry(this.app.selectedRankingId.value, apiEntry.entryId);
+            if (entry !== null) {
+                sorted.push({ row: entry, markedOff: apiEntry.markedOff });
+            }
+        }
+
+        sorted.sort((a, b) => {
+            if (a.row.jokerOf !== null && b.row.jokerOf == null) {
+                return -1;
+            }
+
+            if (a.row.jokerOf === null && b.row.jokerOf !== null) {
+                return 1;
+            }
+
+            return a.row.name.localeCompare(b.row.name);
+        })
+
         let current = 0;
         let total = 0;
-        for (const entry of this._entries) {
+        for (const entry of sorted) {
             total += 1;
             if (entry.markedOff) {
                 continue;
             }
 
             current += 1;
-            const row = await this.app.rankingAccess.getEntry(this.app.selectedRankingId.value, entry.entryId);
-            if (row == null) {
-                continue;
-            }
-
+            const row = entry.row;
             games.appendChild(new TabEliminationCardComponent(row, async () => {
                 if (this.app.selectedRankingId.value === null) {
                     this.app.errorDialog.showError("No ranking is active.");
@@ -122,7 +150,7 @@ export class EliminationTabComponent implements Component
                 }
 
                 /* Mark off using API */
-                const res = await api.markOffEliminationEntry(this.app, this.app.selectedRankingId.value, entry.entryId);
+                const res = await api.markOffEliminationEntry(this.app, this.app.selectedRankingId.value, row.id);
                 if (res == "error") {
                     this.app.errorDialog.showError("An error occured while syncing elimination list state to server.");
                     return;
@@ -147,7 +175,8 @@ interface Entry
     id: string,
     name: string,
     score: number,
-    markedOff: boolean
+    markedOff: boolean,
+    isJoker: boolean
 }
 
 function weightedRandomSelection(entries: Array<Entry>, n: number): Array<Entry>

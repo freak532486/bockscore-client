@@ -19,3 +19,18 @@
     transition: transform 1s linear;
     transform: scaleX(1);
 }
+
+.game-card.joker-shake {
+    transform-origin: center center;
+    animation: joker-shake 0.4s ease;
+}
+
+@keyframes joker-shake {
+    0%   { transform: translateX(0) rotate(0deg); }
+    15%  { transform: translateX(-5px) rotate(-2deg); }
+    30%  { transform: translateX(5px) rotate(2deg); }
+    45%  { transform: translateX(-4px) rotate(-1.5deg); }
+    60%  { transform: translateX(4px) rotate(1.5deg); }
+    75%  { transform: translateX(-2px) rotate(-1deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+}
