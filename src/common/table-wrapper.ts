@@ -72,26 +72,18 @@ export class ScoreTableWrapper
             return "error";
         }
 
-        const fetchEntryImage = async (entryId: string) => {
-            const res = await api.getEntryImage(app, entryId);
-            if (res == "error" || res == "not_found") {
-                return undefined;
-            }
-
-            return res;
-        }
-
+        
         const rows = await Promise.all(rowsRes.map(async x => new ScoreTableRowWrapper(
-            app,
-            x.id,
-            x.name,
-            scoreMap.get(x.id) || new Map(),
-            userIdToMemberId,
-            x.joker == undefined ?
-                null :
-                header.members.find(y => y.id == x.joker!.id) || null,
-            await fetchEntryImage(x.id)
-        )));
+                app,
+                x.id,
+                x.name,
+                scoreMap.get(x.id) || new Map(),
+                userIdToMemberId,
+                x.joker == undefined ?
+                    null :
+                    header.members.find(y => y.id == x.joker!.id) || null
+            )
+        ));
 
         /* Done */
         return new ScoreTableWrapper(app, tableId, header, rows, userIdToMemberId);
@@ -108,7 +100,7 @@ export class ScoreTableWrapper
     {
         const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
-            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId, null, undefined));
+            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId, null));
             return true;
         }
 
@@ -177,14 +169,15 @@ export class ScoreTableHeaderWrapper
 
 export class ScoreTableRowWrapper
 {
+    private imageCache: Promise<Blob | undefined> | null = null;
+
     constructor(
         private readonly app: App,
         public readonly id: string,
         private _name: string,
         private readonly _data: Map<string, number>,
         private readonly userToMemberId: Map<string, string>,
-        public readonly jokerOf: api.MemberInfo | null, //
-        private _image: Blob | undefined
+        public readonly jokerOf: api.MemberInfo | null //
     ) {}
 
     get name() {
@@ -262,9 +255,20 @@ export class ScoreTableRowWrapper
         return false;
     }
 
-    get image()
+    async getImage(): Promise<Blob | undefined>
     {
-        return this._image;
+        if (this.imageCache !== null) {
+            return this.imageCache;
+        }
+
+        this.imageCache = api.getEntryImage(this.app, this.id).then(x => {
+            if (x == "error" || x == "not_found") {
+                return undefined;
+            }
+
+            return x;
+        });
+        return this.imageCache;
     }
 
     async setImage(image: Blob): Promise<boolean> {
@@ -274,7 +278,7 @@ export class ScoreTableRowWrapper
 
         const res = await api.setEntryImage(this.app, this.id, image);
         if (res == "ok") {
-            this._image = image;
+            this.imageCache = Promise.resolve(image);
             return true;
         }
 

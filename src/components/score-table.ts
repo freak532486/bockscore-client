@@ -84,11 +84,12 @@ export class MobileScoreTableComponent implements Component
 
         /* Create image link for entry image */
         const domImg = elem.querySelector("img") as HTMLImageElement;
-        const img = row.image;
-        if (img !== undefined) {
-            const url = URL.createObjectURL(img);
-            domImg.src = url;
-        }
+        row.getImage().then(x => {
+            if (x !== undefined) {
+                const url = URL.createObjectURL(x);
+                domImg.src = url;
+            }
+        });
 
         return elem;
     }

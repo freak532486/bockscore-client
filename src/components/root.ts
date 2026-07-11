@@ -21,6 +21,15 @@ export class RootComponent implements Component
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
 
+        /* Preload every selected ranking */
+        app.selectedRankingId.subscribe((val, _) => {
+            if (val == null) {
+                return;
+            }
+
+            app.rankingAccess.preloadRanking(val);
+        });
+
         /* Setup commonly used components */
         document.body.appendChild(app.errorDialog.view);
         document.body.appendChild(app.inputBlocker.view);
@@ -100,7 +109,6 @@ export class RootComponent implements Component
 
         this.app.selectedRankingId.subscribe(() => makeTabsSelectable());
         this.app.rankingAccess.addEventListener(RankingAccess.EVENT_RANKINGS_CHANGED, () => makeTabsSelectable());
-        
 
         /* Switch between login/logout view depending on app state */
         const loginDiv = this.view.querySelector("div.login") as HTMLDivElement;

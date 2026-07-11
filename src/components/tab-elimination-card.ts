@@ -23,11 +23,14 @@ export class TabEliminationCardComponent implements Component
 
         /* Replace image */
         const domImg = this.view.querySelector("img") as HTMLImageElement;
-        const img = row.image;
-        if (img !== undefined) {
-            const url = URL.createObjectURL(img);
-            domImg.src = url;
-        }
+        
+        /* Only load images after ranking has fully loaded, to prevent blocking the load */
+        row.getImage().then(img => {
+            if (img !== undefined) {
+                const url = URL.createObjectURL(img);
+                domImg.src = url;
+            }
+        });
 
         /* Delete after pressing down for five seconds */
         const progress = this.view.querySelector(".hold-progress") as HTMLElement;
