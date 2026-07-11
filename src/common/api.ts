@@ -1,4 +1,4 @@
-import type { App } from "./app"
+import type { App } from "./app";
 import { getCookie } from "./utils";
 
 export interface LoginRequest
@@ -358,7 +358,7 @@ export interface ScoreTableRow
 {
     "id": string,
     "name": string,
-    "joker": {
+    "joker"?: {
         "id": string,
         "name": string
     }
@@ -464,6 +464,16 @@ export async function renameRow(app: App, entryId: string, newName: string): Pro
     const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
         method: "PUT",
         "body": JSON.stringify({ "name": newName })
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
+export async function setEntryJokerMember(app: App, entryId: string, memberId: string): Promise<"ok" | "error">
+{
+    const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
+        method: "PUT",
+        "body": JSON.stringify({ "jokerMemberId": memberId })
     });
 
     return response.ok ? "ok" : "error";

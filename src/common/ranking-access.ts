@@ -1,7 +1,7 @@
+import * as api from "./api";
 import type { App } from "./app";
-import { ScoreTableRowWrapper, ScoreTableWrapper } from "./table-wrapper";
-import * as api from "./api"
 import { Mutex } from "./mutex";
+import { ScoreTableRowWrapper, ScoreTableWrapper } from "./table-wrapper";
 
 export interface Ranking
 {
@@ -101,6 +101,14 @@ export class RankingAccess extends EventTarget
 
             return table;
         });
+    }
+
+    async preloadRanking(rankingId: string)
+    {
+        const allTables = await this.getAllTablesForRanking(rankingId);
+        for (const table of allTables) {
+            await this.getTable(table.id);
+        }
     }
 
     getAllRankings(): Promise<Array<Ranking>>

@@ -1,14 +1,14 @@
-import template from "./root.html"
+import * as api from "../common/api";
+import type { App } from "../common/app";
+import { RankingAccess } from "../common/ranking-access";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import type { App } from "../common/app";
-import * as api from "../common/api"
-import { LoginDialogComponent } from "./login-dialog";
-import { RankingsTabComponent } from "./tab-rankings";
-import { WheelTabComponent } from "./tab-wheel";
 import { InputDialog } from "./input-dialog";
+import { LoginDialogComponent } from "./login-dialog";
+import template from "./root.html";
+import { RankingsTabComponent } from "./tab-rankings";
 import { SettingsTab } from "./tab-settings";
-import { RankingAccess } from "../common/ranking-access";
+import { WheelTabComponent } from "./tab-wheel";
 
 export class RootComponent implements Component
 {
@@ -20,6 +20,15 @@ export class RootComponent implements Component
     {
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
+
+        /* Preload every selected ranking */
+        app.selectedRankingId.subscribe((val, _) => {
+            if (val == null) {
+                return;
+            }
+
+            app.rankingAccess.preloadRanking(val);
+        });
 
         /* Setup commonly used components */
         document.body.appendChild(app.errorDialog.view);
@@ -74,7 +83,6 @@ export class RootComponent implements Component
             }
 
             const allRankings = await this.app.rankingAccess.getAllRankings();
-            console.log("Updating tabs, rankings = " + allRankings);
             if (!allRankings.find(x => x.id == this.app.selectedRankingId.value)) {
                 activeRankingExists = false;
             }
@@ -101,7 +109,6 @@ export class RootComponent implements Component
 
         this.app.selectedRankingId.subscribe(() => makeTabsSelectable());
         this.app.rankingAccess.addEventListener(RankingAccess.EVENT_RANKINGS_CHANGED, () => makeTabsSelectable());
-        
 
         /* Switch between login/logout view depending on app state */
         const loginDiv = this.view.querySelector("div.login") as HTMLDivElement;

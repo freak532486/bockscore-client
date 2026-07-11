@@ -1,19 +1,30 @@
+import * as bootstrap from "bootstrap";
+import imageCompression from "browser-image-compression";
+import type { App } from "../common/app";
+import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./row-details-dialog.html"
-import * as bootstrap from "bootstrap"
-import "./row-details-dialog.css"
-import imageCompression from "browser-image-compression";
+import "./row-details-dialog.css";
+import template from "./row-details-dialog.html";
 
 const TARGET_IMAGE_SIZE = 200 * 1024; // 200KB
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+
+export type EntryUpdateCallback = (
+        score: number | undefined,
+        newRowname: string  | undefined,
+        newImage: Blob  | undefined,
+        newJoker: string | undefined
+    ) => void;
 
 export class RowDetailsDialog implements Component {
     public readonly view: HTMLElement;
     private readonly modal: bootstrap.Modal;
     private imageData: Blob | undefined;
 
-    constructor() {
+    constructor(
+        private readonly app: App
+    ) {
         this.view = htmlToElement(template);
         this.modal = new bootstrap.Modal(this.view);
 
@@ -76,17 +87,34 @@ export class RowDetailsDialog implements Component {
     }
 
     show(
-        rowname: string,
-        scores: Map<string, number | undefined>,
-        update: (score?: number, newRowname?: string, newImage?: Blob) => void,
+        row: ScoreTableRowWrapper,
+        table: ScoreTableWrapper,
+        update: EntryUpdateCallback,
         deleteRow: () => void
     ) {
         this.reset();
 
         /* Write rowname into header */
+        const rowname = row.name;
         (this.view.querySelector("#row-details-title") as HTMLElement).textContent = rowname;
 
+        /* Set state of joker checkbox */
+        const checkJoker = this.view.querySelector("#check-joker") as HTMLInputElement;
+        const curMemberId = this.app.userId.value == null ?
+            undefined :
+            table.header.userToMemberId.get(this.app.userId.value);
+
+        const hasJoker = row.jokerOf !== null;
+        const isOwnJoker = hasJoker && row.jokerOf.id == curMemberId;
+        checkJoker.disabled = hasJoker;
+        checkJoker.checked = isOwnJoker;
+
         /* Add scores to table */
+        const scores: Map<string, number | undefined> = new Map();
+        for (const member of table.header.members) {
+            scores.set(member.name, row.getScore(member.id));
+        }
+
         const tbody = this.view.querySelector("tbody") as HTMLElement;
         tbody.replaceChildren();
 
@@ -99,7 +127,8 @@ export class RowDetailsDialog implements Component {
             const td1 = document.createElement("td");
             const td2 = document.createElement("td");
             td1.textContent = score.name;
-            td2.textContent = String(score.score == undefined ? "---" : score.score);
+            const isJoker = row.jokerOf !== null && row.jokerOf.name === score.name;
+            td2.textContent = String(score.score == undefined ? "---" : score.score) + (isJoker ? " (Joker)" : "");
             tr.appendChild(td1);
             tr.appendChild(td2);
             tbody.appendChild(tr);
@@ -125,7 +154,10 @@ export class RowDetailsDialog implements Component {
                 newRowname = inValue;
             }
 
-            update(newScore, newRowname, this.imageData);
+            /* Change joker status if applies */
+            const newJoker = (!isOwnJoker && checkJoker.checked) ? curMemberId : undefined;
+
+            update(newScore, newRowname, this.imageData, newJoker);
             this.modal.hide();
         }
 

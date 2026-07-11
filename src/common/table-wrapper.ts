@@ -1,5 +1,5 @@
+import * as api from "./api";
 import type { App } from "./app";
-import * as api from "./api"
 
 /**
  * A wrapper around a score table. Can be modified. Every modification will automatically be sent to the API. If that
@@ -44,7 +44,8 @@ export class ScoreTableWrapper
             tableHeader?.name,
             membersRes,
             tableHeader.scoring,
-            tableId
+            tableId,
+            userIdToMemberId,
         );
 
         /* Fetch the scores */
@@ -72,23 +73,18 @@ export class ScoreTableWrapper
             return "error";
         }
 
-        const fetchEntryImage = async (entryId: string) => {
-            const res = await api.getEntryImage(app, entryId);
-            if (res == "error" || res == "not_found") {
-                return undefined;
-            }
-
-            return res;
-        }
-
+        
         const rows = await Promise.all(rowsRes.map(async x => new ScoreTableRowWrapper(
-            app,
-            x.id,
-            x.name,
-            scoreMap.get(x.id) || new Map(),
-            userIdToMemberId,
-            await fetchEntryImage(x.id)
-        )));
+                app,
+                x.id,
+                header,
+                x.name,
+                scoreMap.get(x.id) || new Map(),
+                x.joker == undefined ?
+                    null :
+                    header.members.find(y => y.id == x.joker!.id) || null
+            )
+        ));
 
         /* Done */
         return new ScoreTableWrapper(app, tableId, header, rows, userIdToMemberId);
@@ -105,7 +101,7 @@ export class ScoreTableWrapper
     {
         const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
-            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId, undefined));
+            this._rows.push(new ScoreTableRowWrapper(this.app, res, this.header, name, new Map(), null));
             return true;
         }
 
@@ -131,6 +127,29 @@ export class ScoreTableWrapper
         return true;
     }
 
+    async setJoker(memberId: string, entryId: string): Promise<boolean>
+    {
+        /* Check if member exists */
+        const member = this.header.members.find(x => x.id == memberId);
+        if (member == undefined) {
+            return false;
+        }
+
+        /* Clear joker in previous row and set it in the new row. */
+        let success: boolean = false;
+        for (const row of this.rows) {
+            if (row.jokerOf?.id === memberId) {
+                row.clearJoker();
+            }
+
+            if (row.id === entryId) {
+                success = await row.setJoker(memberId);
+            }
+        }
+
+        return success;
+    }
+
 }
 
 export class ScoreTableHeaderWrapper
@@ -140,7 +159,8 @@ export class ScoreTableHeaderWrapper
         private _name: string,
         private readonly _members: Array<api.MemberInfo>,
         private _scoreMode: api.ScoringType,
-        private tableId: string
+        private tableId: string,
+        public readonly userToMemberId: Map<string, string>,
     ) {}
 
     get members() {
@@ -174,17 +194,52 @@ export class ScoreTableHeaderWrapper
 
 export class ScoreTableRowWrapper
 {
+    private imageCache: Promise<Blob | undefined> | null = null;
+
     constructor(
         private readonly app: App,
         public readonly id: string,
+        private readonly header: ScoreTableHeaderWrapper,
         private _name: string,
         private readonly _data: Map<string, number>,
-        private readonly userToMemberId: Map<string, string>,
-        private _image: Blob | undefined
+        private _jokerOf: api.MemberInfo | null //
     ) {}
 
     get name() {
         return this._name;
+    }
+
+    get jokerOf() {
+        return this._jokerOf;
+    }
+
+    /**
+     * Use ScoreTableWrapper::setJoker() instead, otherwise the table may have multiple rows with the same joker member.
+     */
+    async setJoker(memberId: string): Promise<boolean>
+    {
+        /* Check if member exists in header */
+        const member = this.header.members.find(x => x.id == memberId);
+        if (member == undefined) {
+            return false;
+        }
+
+        const res = await api.setEntryJokerMember(this.app, this.id, memberId);
+        if (res == "error") {
+            return false;
+        }
+
+        this._jokerOf = member;
+        return true;
+    }
+
+    /**
+     * Not synced with API. Use ScoreTableWrapper::setJoker() and be happy.
+     */
+    clearJoker(): boolean
+    {
+        this._jokerOf = null;
+        return true;
     }
 
     /**
@@ -232,7 +287,7 @@ export class ScoreTableRowWrapper
         }
 
         
-        const memberId = this.userToMemberId.get(this.app.userId.value);
+        const memberId = this.header.userToMemberId.get(this.app.userId.value);
         if (memberId == undefined) {
             return false;
         }
@@ -258,9 +313,20 @@ export class ScoreTableRowWrapper
         return false;
     }
 
-    get image()
+    async getImage(): Promise<Blob | undefined>
     {
-        return this._image;
+        if (this.imageCache !== null) {
+            return this.imageCache;
+        }
+
+        this.imageCache = api.getEntryImage(this.app, this.id).then(x => {
+            if (x == "error" || x == "not_found") {
+                return undefined;
+            }
+
+            return x;
+        });
+        return this.imageCache;
     }
 
     async setImage(image: Blob): Promise<boolean> {
@@ -270,7 +336,7 @@ export class ScoreTableRowWrapper
 
         const res = await api.setEntryImage(this.app, this.id, image);
         if (res == "ok") {
-            this._image = image;
+            this.imageCache = Promise.resolve(image);
             return true;
         }
 
