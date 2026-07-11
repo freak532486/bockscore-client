@@ -44,10 +44,12 @@ export class WheelTabComponent implements Component
 
         /* Spin and remove entry on button click */
         const onWin = (entry: string) => {
+            const sndApplause = this.view.querySelector("#snd-applause") as HTMLAudioElement;
             const winnerSpan = dialogView.querySelector("#wheel-dialog-winner") as HTMLSpanElement;
             winnerSpan.textContent = entry;
 
             this.modal.show();
+            sndApplause.play();
 
             (dialogView.querySelector("#btn-wheel-remove") as HTMLButtonElement).onclick = () => {
                 onClose();

@@ -1,7 +1,7 @@
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./wheel.html"
-import "./wheel.css"
+import "./wheel.css";
+import template from "./wheel.html";
 
 const CANVAS_WIDTH = 1000;
 const CANVAS_HEIGHT = 1000;
@@ -25,7 +25,7 @@ const WHEEL_TEXT_COLORS = [
 const WHEEL_MAX_ENTRY_LENGTH = 25;
 const SPIN_SPEED_IDLE = 20; // degrees per second
 
-const SPIN_TIME_SECONDS = 20;
+const SPIN_TIME_SECONDS = 10;
 const WIN_EVENT_DELAY_SECONDS = 0.5;
 const NUM_SPINS = 10;
 
@@ -39,6 +39,8 @@ interface Spin
 export class WheelComponent implements Component
 {
     public readonly view: HTMLElement;
+    private readonly audioCtx = new AudioContext();
+    private sndSpin: AudioBuffer | undefined;
 
     private lastTs: number = 0;
     private rotation: number = 0;
@@ -57,6 +59,9 @@ export class WheelComponent implements Component
 
         this.drawWheel(ctx, entries);
 
+        /* Load the click sound */
+        this.loadSpinSound();
+
         /* Initial spin animation */
         const anim = (ts: number) => {
             this.wheelAnimation(ctx, ts);
@@ -64,6 +69,24 @@ export class WheelComponent implements Component
         }
 
         anim(0);
+    }
+
+    private async loadSpinSound()
+    {
+        const res = await fetch("/sounds/spin.mp3");
+        const arr = await res.arrayBuffer();
+        this.sndSpin = await this.audioCtx.decodeAudioData(arr);
+    }
+
+    private playSpinSound() {
+        if (this.sndSpin == undefined) {
+            return;
+        }
+
+        const source = this.audioCtx.createBufferSource();
+        source.buffer = this.sndSpin;
+        source.connect(this.audioCtx.destination);
+        source.start();
     }
 
     private wheelAnimation(ctx: CanvasRenderingContext2D, ts: number) {
@@ -76,12 +99,18 @@ export class WheelComponent implements Component
         this.lastTs = ts;
 
         /* Apply idle spin if no spin is happening, otherwise actual spin */
+        const oldActiveEntry = this.getActiveEntryIdx();
         if (this.spinData == undefined) {
             const angleDeg = SPIN_SPEED_IDLE * elapsedMs / 1000;
             const angleRad = 2 * Math.PI * angleDeg / 360;
             this.rotation = (this.rotation + angleRad) % (2 * Math.PI);
         } else {
             this.rotation = getAnimAngle(this.spinData, ts);
+        }
+
+        /* Play click sound when not idle */
+        if (this.getActiveEntryIdx() !== oldActiveEntry && this.sndSpin !== undefined && this.spinData !== undefined) {
+            this.playSpinSound();
         }
 
         /* Rotate canvas */
