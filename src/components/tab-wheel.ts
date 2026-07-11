@@ -14,8 +14,7 @@ const INITIAL_ENTRIES = [
     "Elderberries"
 ];
 
-export class WheelTabComponent implements Component
-{
+export class WheelTabComponent implements Component {
     public readonly view;
     private modal: Modal;
 
@@ -88,5 +87,23 @@ export class WheelTabComponent implements Component
             wheel.entries = names;
             textarea.value = wheel.entries.join("\n");
         }
+
+        /* Make shuffle button work */
+        const btnShuffle = this.view.querySelector("#btn-shuffle") as HTMLButtonElement;
+        btnShuffle.onclick = () => {
+            const entries = [...wheel.entries];
+            shuffle(entries);
+            wheel.entries = entries;
+            textarea.value = entries.join("\n");
+        }
+    }
+}
+
+function shuffle<T>(array: Array<T>): void {
+    let currentIndex = array.length;
+    while (currentIndex != 0) {
+        let randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex]!, array[currentIndex]!];
     }
 }
