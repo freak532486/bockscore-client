@@ -1,5 +1,5 @@
+import * as api from "./api";
 import type { App } from "./app";
-import * as api from "./api"
 
 /**
  * A wrapper around a score table. Can be modified. Every modification will automatically be sent to the API. If that
@@ -87,6 +87,9 @@ export class ScoreTableWrapper
             x.name,
             scoreMap.get(x.id) || new Map(),
             userIdToMemberId,
+            x.joker == undefined ?
+                null :
+                header.members.find(y => y.id == x.joker!.id) || null,
             await fetchEntryImage(x.id)
         )));
 
@@ -105,7 +108,7 @@ export class ScoreTableWrapper
     {
         const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
-            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId, undefined));
+            this._rows.push(new ScoreTableRowWrapper(this.app, res, name, new Map(), this.userIdToMemberId, null, undefined));
             return true;
         }
 
@@ -180,6 +183,7 @@ export class ScoreTableRowWrapper
         private _name: string,
         private readonly _data: Map<string, number>,
         private readonly userToMemberId: Map<string, string>,
+        public readonly jokerOf: api.MemberInfo | null, //
         private _image: Blob | undefined
     ) {}
 

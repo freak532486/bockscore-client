@@ -1,4 +1,4 @@
-import type { App } from "./app"
+import type { App } from "./app";
 import { getCookie } from "./utils";
 
 export interface LoginRequest
@@ -358,7 +358,7 @@ export interface ScoreTableRow
 {
     "id": string,
     "name": string,
-    "joker": {
+    "joker"?: {
         "id": string,
         "name": string
     }

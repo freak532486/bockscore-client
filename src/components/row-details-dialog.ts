@@ -1,9 +1,10 @@
+import * as bootstrap from "bootstrap";
+import imageCompression from "browser-image-compression";
+import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./row-details-dialog.html"
-import * as bootstrap from "bootstrap"
-import "./row-details-dialog.css"
-import imageCompression from "browser-image-compression";
+import "./row-details-dialog.css";
+import template from "./row-details-dialog.html";
 
 const TARGET_IMAGE_SIZE = 200 * 1024; // 200KB
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -76,17 +77,23 @@ export class RowDetailsDialog implements Component {
     }
 
     show(
-        rowname: string,
-        scores: Map<string, number | undefined>,
+        row: ScoreTableRowWrapper,
+        table: ScoreTableWrapper,
         update: (score?: number, newRowname?: string, newImage?: Blob) => void,
         deleteRow: () => void
     ) {
         this.reset();
 
         /* Write rowname into header */
+        const rowname = row.name;
         (this.view.querySelector("#row-details-title") as HTMLElement).textContent = rowname;
 
         /* Add scores to table */
+        const scores: Map<string, number | undefined> = new Map();
+        for (const member of table.header.members) {
+            scores.set(member.name, row.getScore(member.id));
+        }
+
         const tbody = this.view.querySelector("tbody") as HTMLElement;
         tbody.replaceChildren();
 
@@ -99,7 +106,8 @@ export class RowDetailsDialog implements Component {
             const td1 = document.createElement("td");
             const td2 = document.createElement("td");
             td1.textContent = score.name;
-            td2.textContent = String(score.score == undefined ? "---" : score.score);
+            const isJoker = row.jokerOf !== null && row.jokerOf.name === score.name;
+            td2.textContent = String(score.score == undefined ? "---" : score.score) + (isJoker ? " (Joker)" : "");
             tr.appendChild(td1);
             tr.appendChild(td2);
             tbody.appendChild(tr);

@@ -1,11 +1,11 @@
-import template from "./score-table.html"
-import entry from "./score-table.entry.html"
 import type { App } from "../common/app";
 import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { RowDetailsDialog } from "./row-details-dialog";
-import "./score-table.entry.css"
+import "./score-table.entry.css";
+import entry from "./score-table.entry.html";
+import template from "./score-table.html";
 
 
 export class MobileScoreTableComponent implements Component
@@ -73,9 +73,14 @@ export class MobileScoreTableComponent implements Component
 
         const avgScore = row.getAvgScore(this.wrapper.header.scoreMode);
         const elem = htmlToElement(entry);
+        const card = elem.querySelector(".card") as HTMLElement;
+        const jokerText = elem.querySelector(".joker-text") as HTMLElement;
         (elem.querySelector(".name") as HTMLElement).textContent = row.name;
         (elem.querySelector(".fullscore") as HTMLElement).textContent = String(avgScore?.toFixed(2) || "?");
-        elem.onclick = () => this.detailDialog.show(row.name, scores, update, deleteRow);
+        elem.onclick = () => this.detailDialog.show(row, this.wrapper, update, deleteRow);
+        card.classList.toggle("joker", row.jokerOf !== null);
+        jokerText.classList.toggle("invisible", row.jokerOf == null);
+        jokerText.textContent = "Joker: " + (row.jokerOf == null ? "" : row.jokerOf.name);
 
         /* Create image link for entry image */
         const domImg = elem.querySelector("img") as HTMLImageElement;

@@ -1,14 +1,14 @@
-import template from "./root.html"
+import * as api from "../common/api";
+import type { App } from "../common/app";
+import { RankingAccess } from "../common/ranking-access";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import type { App } from "../common/app";
-import * as api from "../common/api"
-import { LoginDialogComponent } from "./login-dialog";
-import { RankingsTabComponent } from "./tab-rankings";
-import { WheelTabComponent } from "./tab-wheel";
 import { InputDialog } from "./input-dialog";
+import { LoginDialogComponent } from "./login-dialog";
+import template from "./root.html";
+import { RankingsTabComponent } from "./tab-rankings";
 import { SettingsTab } from "./tab-settings";
-import { RankingAccess } from "../common/ranking-access";
+import { WheelTabComponent } from "./tab-wheel";
 
 export class RootComponent implements Component
 {
@@ -74,7 +74,6 @@ export class RootComponent implements Component
             }
 
             const allRankings = await this.app.rankingAccess.getAllRankings();
-            console.log("Updating tabs, rankings = " + allRankings);
             if (!allRankings.find(x => x.id == this.app.selectedRankingId.value)) {
                 activeRankingExists = false;
             }
