@@ -53,7 +53,7 @@ export class RowDetailsDialog implements Component {
                 errMsg.classList.toggle("text-danger", tooLarge);
 
                 if (!tooLarge) {
-                    this.imageData = new Blob([await compressed.bytes()], { "type": compressed.type });
+                    this.imageData = new Blob([await compressed.arrayBuffer()], { "type": compressed.type });
                     const url = URL.createObjectURL(this.imageData);
                     imagePreview.src = url;
                     imagePreviewDiv.classList.remove("d-none");

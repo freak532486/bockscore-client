@@ -497,7 +497,7 @@ export async function getEntryImage(app: App, entryId: string): Promise<Blob | "
         return "error";
     }
 
-    const bytes = await response.bytes();
+    const bytes = new Uint8Array(await response.arrayBuffer());
     return new Blob([bytes], { "type": contentType });
 }
 
