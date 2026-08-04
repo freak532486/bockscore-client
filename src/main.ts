@@ -9,5 +9,7 @@ const app = new App();
 await api.updateXsrfToken(app);
 await api.signin(app);
 
+document.body.appendChild(app.messageBox.view);
+
 const rootComponent = new RootComponent(app);
 document.body.appendChild(rootComponent.view);

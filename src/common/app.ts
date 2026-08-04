@@ -1,5 +1,6 @@
 import { ErrorDialogComponent } from "../components/error-dialog";
 import { InputBlockerComponent } from "../components/input-blocker";
+import { MessageBox } from "../components/message-box";
 import { EliminationTabComponent } from "../components/tab-elimination";
 import { Observable } from "./observable";
 import { RankingAccess } from "./ranking-access";
@@ -21,6 +22,7 @@ export class App
     public sseHandler: SSEHandler = new SSEHandler(this);
     public rankingAccess: RankingAccess = new RankingAccess(this);
 
+    public messageBox: MessageBox = new MessageBox();
     public errorDialog: ErrorDialogComponent = new ErrorDialogComponent();
     public inputBlocker: InputBlockerComponent = new InputBlockerComponent();
 

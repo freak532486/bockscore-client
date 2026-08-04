@@ -21,6 +21,7 @@ export class EliminationTabComponent implements Component
         /* Fetch state from API */
         this._entries = [];
         const syncWithServer = async () => {
+            const oldEntries = this._entries;
             this._entries = [];
 
             if (this.app.selectedRankingId.value == null) {
@@ -35,6 +36,10 @@ export class EliminationTabComponent implements Component
                 return;
             }
 
+            const msg = await this.getAlertMessage(oldEntries, res);
+            if (msg !== null) {
+                this.app.messageBox.showMessage(msg);
+            }
             this._entries = res;
             this.updateView();
         }
@@ -45,6 +50,52 @@ export class EliminationTabComponent implements Component
         /* Make import button work */
         const btnImport = this.view.querySelector("#btn-elimination-import") as HTMLButtonElement;
         btnImport.onclick = () => this.importDialog.show(settings => this.performImport(settings));
+    }
+
+    private async getAlertMessage(oldEntries: Array<api.EliminationEntry>, newEntries: Array<api.EliminationEntry>): Promise<string | null>
+    {
+        const DEFAULT_MSG = null;
+
+        if (this.app.selectedRankingId.value == null) {
+            return DEFAULT_MSG;
+        }
+        
+        if (oldEntries.length !== newEntries.length) {
+            return DEFAULT_MSG; 
+        }
+
+        if (oldEntries.length == 0) {
+            return null;
+        }
+
+        const newMarkedOff: Array<string> = [];
+        for (let i = 0; i < oldEntries.length; i++) {
+            const oldEntry = oldEntries[i]!;
+            const newEntry = newEntries[i]!;
+
+            if (oldEntry.entryId !== newEntry.entryId) {
+                return DEFAULT_MSG;
+            }
+
+            if (oldEntry.markedOff == false && newEntry.markedOff == true) {
+                newMarkedOff.push(oldEntry.entryId);
+            }
+
+            if (oldEntry.markedOff == true && newEntry.markedOff == false) {
+                return DEFAULT_MSG;
+            }
+        }
+
+        if (newMarkedOff.length == 0) {
+            return null;
+        }
+
+        if (newMarkedOff.length !== 1) {
+            return DEFAULT_MSG;
+        }
+
+        const name = (await this.app.rankingAccess.getEntry(this.app.selectedRankingId.value, newMarkedOff[0]!))?.name;
+        return `'${name}' was removed.`;
     }
 
     private async performImport(settings: EliminationImportSettings)
