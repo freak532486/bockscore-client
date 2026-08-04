@@ -16,7 +16,7 @@
 }
 
 .game-card .hold-progress.filling {
-    transition: transform 1s linear;
+    transition: transform 850ms linear 150ms;
     transform: scaleX(1);
 }
 
