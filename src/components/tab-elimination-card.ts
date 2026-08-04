@@ -17,6 +17,13 @@ export class TabEliminationCardComponent implements Component {
         this.view = htmlToElement(template);
         const card = this.view.querySelector(".game-card") as HTMLElement;
 
+        /* Disable context menu on long click */
+        this.view.oncontextmenu = ev => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            return false;
+        }
+
         /* Replace name */
         const gameNameSpan = this.view.querySelector(".game-name") as HTMLElement;
         gameNameSpan.textContent = row.name;
