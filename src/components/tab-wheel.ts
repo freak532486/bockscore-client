@@ -77,7 +77,7 @@ export class WheelTabComponent implements Component {
             const names: Array<string> = [];
             for (const entry of app.tabElimination.entries) {
                 const row = await app.rankingAccess.getEntry(app.selectedRankingId.value, entry.entryId);
-                if (row == null) {
+                if (row == null || entry.markedOff) {
                     continue;
                 }
 
