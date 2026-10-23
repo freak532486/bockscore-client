@@ -545,7 +545,7 @@ export async function getEliminationTable
         return "error";
     }
 
-    return (await res.json()).entries as Array<EliminationEntry>
+    return await res.json() as Array<EliminationEntry>
 }
 
 export async function updateEliminationTable(
