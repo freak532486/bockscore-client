@@ -17,9 +17,11 @@ export class RankingsTabComponent implements Component
     public readonly view: HTMLElement;
     private readonly detailDialog: RowDetailsDialog;
     private readonly updateLock = new Mutex();
+    private readonly addTableItem: HTMLElement;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
+        this.addTableItem = this.view.querySelector(".add-table-item") as HTMLElement;
         this.detailDialog = new RowDetailsDialog(app);
         document.body.appendChild(this.detailDialog.view);
 
@@ -116,8 +118,9 @@ export class RankingsTabComponent implements Component
     {
         return this.updateLock.withLock(() => this.app.inputBlocker.runAsyncWithBlockedInput(async () => {
             const header = this.view.querySelector("#tab-rankings-header") as HTMLElement;
+            const btnTableSettings = this.view.querySelector("#btn-table-settings") as HTMLElement;
             const ul = this.view.querySelector("ul") as HTMLElement;
-            ul.replaceChildren();
+            ul.replaceChildren(this.addTableItem);
 
             const rankingId = this.app.selectedRankingId.value;
             if (rankingId == null) {
@@ -126,9 +129,11 @@ export class RankingsTabComponent implements Component
                 return;
             }
 
+            header.classList.toggle("d-none", false);
+
             const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(rankingId);
+            btnTableSettings.classList.toggle("d-none", tableHeaders.length == 0);
             if (tableHeaders.length == 0) {
-                header.classList.toggle("d-none", true);
                 this.app.selectedTableId.value = null;
                 return;
             }
@@ -147,10 +152,8 @@ export class RankingsTabComponent implements Component
                 btn.textContent = table.header.name;
                 btn.onclick = () => this.app.selectedTableId.value = table.id;
                 li.appendChild(btn);
-                ul.appendChild(li);
+                ul.insertBefore(li, this.addTableItem);
             }
-
-            header.classList.toggle("d-none", false);
 
             const tableIds = tableHeaders.map(x => x.id);
             const current = this.app.selectedTableId.value;
@@ -168,7 +171,7 @@ export class RankingsTabComponent implements Component
 
     private highlightSelectedTable()
     {
-        for (const btn of this.view.querySelectorAll<HTMLButtonElement>("ul button.nav-link")) {
+        for (const btn of this.view.querySelectorAll<HTMLButtonElement>("ul button[data-table-id]")) {
             btn.classList.toggle("active", btn.dataset.tableId === this.app.selectedTableId.value);
         }
     }

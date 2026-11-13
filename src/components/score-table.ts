@@ -1,11 +1,13 @@
 import type { App } from "../common/app";
 import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
+import "./compact-row.css";
 import type { Component } from "./component";
 import { RowDetailsDialog, type EntryUpdateCallback } from "./row-details-dialog";
 import "./score-table.entry.css";
 import entry from "./score-table.entry.html";
 import template from "./score-table.html";
+import { setupThumbnail } from "./thumbnail";
 
 
 export class MobileScoreTableComponent implements Component
@@ -63,33 +65,26 @@ export class MobileScoreTableComponent implements Component
         deleteRow: () => void
     ): HTMLElement
     {
-        /* Fetch scores for each user */
-        const scores = new Map<string, number | undefined>();
-        for (const member of this.wrapper.header.members) {
-            scores.set(member.name, row.getScore(member.id));
-        }
+        const elem = htmlToElement(entry);
+        elem.onclick = () => this.detailDialog.show(row, this.wrapper, update, deleteRow);
+
+        (elem.querySelector(".name") as HTMLElement).textContent = row.name;
 
         const avgScore = row.getAvgScore(this.wrapper.header.scoreMode);
-        const elem = htmlToElement(entry);
-        const card = elem.querySelector(".card") as HTMLElement;
-        const jokerText = elem.querySelector(".joker-text") as HTMLElement;
-        (elem.querySelector(".name") as HTMLElement).textContent = row.name;
-        (elem.querySelector(".fullscore") as HTMLElement).textContent = String(avgScore?.toFixed(2) || "?");
-        elem.onclick = () => this.detailDialog.show(row, this.wrapper, update, deleteRow);
-        card.classList.toggle("joker", row.jokerOf !== null);
-        jokerText.classList.toggle("invisible", row.jokerOf == null);
-        jokerText.textContent = "Joker: " + (row.jokerOf == null ? "" : row.jokerOf.name);
+        (elem.querySelector(".fullscore") as HTMLElement).textContent = avgScore?.toFixed(2) ?? "–";
 
-        /* Create image link for entry image */
-        const domImg = elem.querySelector("img") as HTMLImageElement;
-        row.getImage().then(x => {
-            if (x !== undefined) {
-                const url = URL.createObjectURL(x);
-                domImg.onload = () => URL.revokeObjectURL(url);
-                domImg.onerror = () => URL.revokeObjectURL(url);
-                domImg.src = url;
-            }
-        });
+        const ownMemberId = this.app.userId.value == null ?
+            undefined :
+            this.wrapper.header.userToMemberId.get(this.app.userId.value);
+        const ownScore = ownMemberId == undefined ? undefined : row.getScore(ownMemberId);
+        (elem.querySelector(".own-score") as HTMLElement).classList.toggle("d-none", ownMemberId == undefined);
+        (elem.querySelector(".own-score-value") as HTMLElement).textContent = ownScore == undefined ? "–" : String(ownScore);
+
+        const jokerText = elem.querySelector(".joker-text") as HTMLElement;
+        jokerText.classList.toggle("d-none", row.jokerOf === null);
+        jokerText.textContent = row.jokerOf === null ? "" : `Joker: ${row.jokerOf.name}`;
+
+        setupThumbnail(elem.querySelector("img.thumb") as HTMLImageElement, row, this.app.imageViewer);
 
         return elem;
     }

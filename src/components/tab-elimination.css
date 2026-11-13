@@ -1,0 +1,11 @@
+.elimination-remaining {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 1020;
+    font-variant-numeric: tabular-nums;
+}
+
+#tab-elimination .games {
+    padding-bottom: 4rem;
+}

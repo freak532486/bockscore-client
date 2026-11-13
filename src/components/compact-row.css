@@ -1,0 +1,55 @@
+.compact-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.compact-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 56px;
+    padding: 4px 0.75rem 4px 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+.compact-list > .compact-row:nth-child(odd) {
+    background-color: rgba(var(--bs-emphasis-color-rgb), 0.04);
+}
+
+.compact-list > .compact-row:hover {
+    background-color: rgba(var(--bs-emphasis-color-rgb), 0.08);
+}
+
+.compact-row .thumb {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: var(--bs-border-radius-sm);
+}
+
+.compact-row .thumb.has-image {
+    cursor: zoom-in;
+}
+
+.compact-row .row-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.compact-row .joker-text {
+    font-size: 0.8em;
+}
+
+.compact-row .row-name,
+.compact-row .joker-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

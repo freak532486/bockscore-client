@@ -3,14 +3,17 @@ import type { App } from "../common/app";
 import { ScoreTableRowWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
+import { ConfirmDialog } from "./confirm-dialog";
 import { EliminationImportDialog, type EliminationImportSettings } from "./elimination-import-dialog";
 import { TabEliminationCardComponent } from "./tab-elimination-card";
+import "./tab-elimination.css";
 import template from "./tab-elimination.html";
 
 export class EliminationTabComponent implements Component
 {
     public readonly view: HTMLElement;
     private readonly importDialog = new EliminationImportDialog();
+    private readonly confirmDialog = new ConfirmDialog();
 
     private _entries: Array<api.EliminationEntry>;
     private syncGeneration = 0;
@@ -19,6 +22,7 @@ export class EliminationTabComponent implements Component
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         document.body.appendChild(this.importDialog.view);
+        document.body.appendChild(this.confirmDialog.view);
 
         /* Fetch state from API */
         this._entries = [];
@@ -213,19 +217,10 @@ export class EliminationTabComponent implements Component
 
             current += 1;
             const row = entry.row;
-            cards.push(new TabEliminationCardComponent(row, async () => {
-                if (this.app.selectedRankingId.value === null) {
-                    this.app.errorDialog.showError("No ranking is active.");
-                    return;
-                }
-
-                /* Mark off using API */
-                const res = await api.markOffEliminationEntry(this.app, this.app.selectedRankingId.value, row.id);
-                if (res == "error") {
-                    this.app.errorDialog.showError("An error occured while syncing elimination list state to server.");
-                    return;
-                }
-            }).view);
+            const card = new TabEliminationCardComponent(row, () => {
+                this.confirmDialog.show(`Do you want to eliminate '${row.name}'?`, () => this.eliminate(row, card.view));
+            }, this.app.imageViewer);
+            cards.push(card.view);
         }
 
         games.replaceChildren(...cards);
@@ -234,6 +229,21 @@ export class EliminationTabComponent implements Component
         spanRemaining.classList.toggle("text-success", current <= total / 2);
         spanCurrent.textContent = String(current);
         spanTotal.textContent = String(total);
+    }
+
+    private async eliminate(row: ScoreTableRowWrapper, view: HTMLElement)
+    {
+        if (this.app.selectedRankingId.value === null) {
+            this.app.errorDialog.showError("No ranking is active.");
+            return;
+        }
+
+        view.remove();
+
+        const res = await api.markOffEliminationEntry(this.app, this.app.selectedRankingId.value, row.id);
+        if (res == "error") {
+            this.app.errorDialog.showError("An error occured while syncing elimination list state to server.");
+        }
     }
 
     get entries() {

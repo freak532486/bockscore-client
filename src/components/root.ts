@@ -1,3 +1,4 @@
+import { Collapse } from "bootstrap";
 import * as api from "../common/api";
 import type { App } from "../common/app";
 import { RankingAccess } from "../common/ranking-access";
@@ -5,6 +6,7 @@ import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { InputDialog } from "./input-dialog";
 import { LoginDialogComponent } from "./login-dialog";
+import "./root.css";
 import template from "./root.html";
 import { RankingsTabComponent } from "./tab-rankings";
 import { SettingsTab } from "./tab-settings";
@@ -33,6 +35,7 @@ export class RootComponent implements Component
         /* Setup commonly used components */
         document.body.appendChild(app.errorDialog.view);
         document.body.appendChild(app.inputBlocker.view);
+        document.body.appendChild(app.imageViewer.view);
 
         /* Apply theme from local storage */
         const storedTheme = window.localStorage.getItem("theme");
@@ -57,6 +60,21 @@ export class RootComponent implements Component
         });
 
         tabs[3]!.view.classList.remove("d-none"); // Initial tab is settings tab.
+
+        /* Close the burger menu after any button inside it was used */
+        const navbarContent = this.view.querySelector("#navbarContent") as HTMLElement;
+        const navbarCollapse = new Collapse(navbarContent, { toggle: false });
+        const navbarToggler = this.view.querySelector(".navbar-toggler") as HTMLButtonElement;
+        navbarContent.addEventListener("click", ev => {
+            const button = (ev.target as Element).closest("button");
+            if (button === null) {
+                return;
+            }
+
+            navbarCollapse.hide();
+            button.blur();
+            navbarToggler.blur();
+        });
 
         /* Make tabs switchable */
         const tabButtons = [...this.view.querySelectorAll(".tabs .nav-link")] as Array<HTMLButtonElement>;

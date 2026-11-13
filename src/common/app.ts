@@ -1,4 +1,5 @@
 import { ErrorDialogComponent } from "../components/error-dialog";
+import { ImageViewer } from "../components/image-viewer";
 import { InputBlockerComponent } from "../components/input-blocker";
 import { MessageBox } from "../components/message-box";
 import { EliminationTabComponent } from "../components/tab-elimination";
@@ -25,6 +26,7 @@ export class App
     public messageBox: MessageBox = new MessageBox();
     public errorDialog: ErrorDialogComponent = new ErrorDialogComponent();
     public inputBlocker: InputBlockerComponent = new InputBlockerComponent();
+    public imageViewer: ImageViewer = new ImageViewer();
 
     public tabElimination: EliminationTabComponent = new EliminationTabComponent(this);
 };
