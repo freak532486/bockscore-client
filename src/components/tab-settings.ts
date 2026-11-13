@@ -83,7 +83,7 @@ export class SettingsTab implements Component
                 return;
             }
 
-            this.app.selectedRankingId.value = res;
+            this.activateRanking(res);
             addRankingDialog.modal.hide();
         }
 
@@ -95,6 +95,15 @@ export class SettingsTab implements Component
         const usernameDisplay = this.view.querySelector("strong.username") as HTMLElement;
         app.username.subscribe((val, _) => usernameDisplay.textContent = val)
         usernameDisplay.textContent = app.username.value;
+    }
+
+    /**
+     * Reloads the app with the given ranking active, so it is loaded behind the loading screen.
+     */
+    private activateRanking(rankingId: string)
+    {
+        this.app.selectedRankingId.value = rankingId;
+        window.location.assign("/");
     }
 
     private async updateRankingsView()
@@ -122,7 +131,7 @@ export class SettingsTab implements Component
                     /* Set active button */
                     const btnSetActive = entry.querySelector(".btn-make-ranking-active") as HTMLButtonElement;
                     btnSetActive.disabled = active;
-                    btnSetActive.onclick = () => this.app.selectedRankingId.value = ranking.id;
+                    btnSetActive.onclick = () => this.activateRanking(ranking.id);
 
                     /* Delete button */
                     const btnDelete = entry.querySelector(".btn-delete-ranking") as HTMLButtonElement;

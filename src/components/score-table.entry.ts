@@ -356,7 +356,6 @@ export class ScoreTableEntryComponent implements Component
     {
         const img = document.createElement("img");
         img.classList.add("thumb");
-        img.src = "/images/placeholder.png";
         img.alt = "";
 
         (this.rowElem.querySelector("img.thumb") as HTMLImageElement).replaceWith(img);

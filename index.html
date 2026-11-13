@@ -5,12 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/images/logo.png">
+    <script>
+        try {
+            const theme = localStorage.getItem("theme");
+            if (theme === "light" || theme === "dark") {
+                document.documentElement.setAttribute("data-bs-theme", theme);
+            }
+        } catch {
+        }
+    </script>
     <script type="module" src="/dist/bundle.js"></script>
     <link rel="stylesheet" href="/dist/bundle.css">
     <title>Bockscore - Alternative Client</title>
 </head>
 
 <body>
+    <div id="loading-screen">
+        <img src="/images/logo.png" alt="" class="loading-logo">
+        <div class="progress" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-bar" style="width: 0%"></div>
+        </div>
+    </div>
 </body>
 
 </html>

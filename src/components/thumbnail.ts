@@ -1,8 +1,13 @@
 import type { ImageViewer } from "./image-viewer";
+import "./thumbnail.css";
+
+const PLACEHOLDER_IMAGE = "/images/placeholder.png";
+const EMPTY_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 /**
- * Loads the entry image into the thumbnail and opens it in the image viewer on click. Pointer events on a loaded
- * thumbnail do not reach the row, so tapping it neither opens the row dialog nor eliminates the entry.
+ * Shows a loading placeholder in the thumbnail until the entry image (or the placeholder for entries without an image)
+ * is available, and opens the image in the image viewer on click. Pointer events on a loaded thumbnail do not reach
+ * the row, so tapping it does not trigger the row action.
  */
 export function setupThumbnail(
     img: HTMLImageElement,
@@ -11,14 +16,24 @@ export function setupThumbnail(
     viewer: ImageViewer
 )
 {
+    img.src = EMPTY_IMAGE;
+    img.classList.add("image-loading");
+
     loadImage().then(blob => {
         if (blob === undefined) {
+            img.classList.remove("image-loading");
+            img.src = PLACEHOLDER_IMAGE;
             return;
         }
 
         const url = URL.createObjectURL(blob);
-        img.onload = () => URL.revokeObjectURL(url);
-        img.onerror = () => URL.revokeObjectURL(url);
+        const loaded = () => {
+            URL.revokeObjectURL(url);
+            img.classList.remove("image-loading");
+        };
+
+        img.onload = loaded;
+        img.onerror = loaded;
         img.src = url;
         img.alt = caption;
         img.classList.add("has-image");
