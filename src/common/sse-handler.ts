@@ -5,35 +5,30 @@ import type { App } from "./app";
  */
 export type SSECallback = (data?: any, senderId?: string) => void;
 
+/**
+ * Pseudo event that is emitted after the connection was re-established. Events sent while the connection was down are
+ * lost, so subscribers should re-fetch their state.
+ */
+export const EVENT_RECONNECTED = "reconnected";
+
+const RECONNECT_DELAY_MS = 5000;
+
 export class SSEHandler
 {
     private eventSource: EventSource | undefined;
+    private rankingId: string | null = null;
+    private reconnectTimeout: number | undefined;
     private handlers: Map<string, Set<SSECallback>> = new Map();
 
     constructor(app: App) {
-        const subscribeToEventSource = (rankingId: string) => {
-            if (this.eventSource !== undefined) {
-                this.eventSource.close();
-                this.eventSource = undefined;
-            }
+        app.selectedRankingId.subscribe(val => {
+            this.rankingId = val;
+            this.connect();
+        });
 
-            this.eventSource = new EventSource("/api/ranking/" + rankingId + "/events");
-
-            /* The server sends named events (`event: <type>`), so every type needs its own listener */
-            for (const type of this.handlers.keys()) {
-                this.listen(this.eventSource, type);
-            }
-        }
-
-        app.selectedRankingId.subscribe((val, prev) => {
-            if (val == null && this.eventSource !== undefined) {
-                this.eventSource.close();
-                this.eventSource = undefined;
-                return;
-            }
-
-            if (val !== null) {
-                subscribeToEventSource(val);
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && this.eventSource?.readyState === EventSource.CLOSED) {
+                this.connect();
             }
         });
     }
@@ -57,6 +52,53 @@ export class SSEHandler
         handlers.add(fn);
     }
 
+    private connect()
+    {
+        window.clearTimeout(this.reconnectTimeout);
+        this.eventSource?.close();
+        this.eventSource = undefined;
+
+        if (this.rankingId === null) {
+            return;
+        }
+
+        const eventSource = new EventSource("/api/ranking/" + this.rankingId + "/events");
+        this.eventSource = eventSource;
+
+        /* The server sends named events (`event: <type>`), so every type needs its own listener */
+        for (const type of this.handlers.keys()) {
+            this.listen(eventSource, type);
+        }
+
+        let opened = false;
+        eventSource.onopen = () => {
+            if (opened) {
+                this.emit(EVENT_RECONNECTED);
+            }
+
+            opened = true;
+        };
+
+        /* The browser reconnects by itself after network errors, but gives up after HTTP errors */
+        eventSource.onerror = () => {
+            if (eventSource.readyState !== EventSource.CLOSED || eventSource !== this.eventSource) {
+                return;
+            }
+
+            this.reconnectTimeout = window.setTimeout(() => {
+                this.connect();
+                this.emit(EVENT_RECONNECTED);
+            }, RECONNECT_DELAY_MS);
+        };
+    }
+
+    private emit(type: string, data?: any, senderId?: string)
+    {
+        for (const handler of this.handlers.get(type) ?? []) {
+            handler(data, senderId);
+        }
+    }
+
     private listen(eventSource: EventSource, type: string)
     {
         eventSource.addEventListener(type, (event: MessageEvent) => {
@@ -67,9 +109,7 @@ export class SSEHandler
                 data = event.data;
             }
 
-            for (const handler of this.handlers.get(type) ?? []) {
-                handler(data, event.lastEventId || undefined);
-            }
+            this.emit(type, data, event.lastEventId || undefined);
         });
     }
 }

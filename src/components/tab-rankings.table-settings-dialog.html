@@ -8,13 +8,13 @@
                     Table settings
                 </h5>
 
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
 
             <div class="modal-body">
                 <div class="mb-2">
-                    <label class="form-label" for="input-table-name">New table name</label>
+                    <label class="form-label" for="input-table-name">Table name</label>
                     <input id="input-table-name" type="text" class="form-control">
                 </div>
                 
@@ -29,7 +29,7 @@
 
             <div class="modal-footer">
                 <div class="d-flex justify-content-between align-items-center w-100">
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    <button id="btn-delete-table" type="button" class="btn btn-danger" title="Delete table" aria-label="Delete table">
                         <i class="bi bi-trash"></i>
                     </button>
                     <div>

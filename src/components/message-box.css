@@ -1,0 +1,8 @@
+/* Placed above the floating counter of the elimination tab, which sits in the same corner */
+#message-box {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + 3.5rem + env(safe-area-inset-bottom));
+    z-index: 1030;
+    max-width: min(360px, calc(100vw - 32px));
+}

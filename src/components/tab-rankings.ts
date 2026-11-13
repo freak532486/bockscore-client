@@ -18,6 +18,7 @@ export class RankingsTabComponent implements Component
     private readonly confirmDialog = new ConfirmDialog();
     private readonly updateLock = new Mutex();
     private readonly addTableItem: HTMLElement;
+    private renderedTable: ScoreTableWrapper | null = null;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
@@ -64,7 +65,8 @@ export class RankingsTabComponent implements Component
                 return;
             }
 
-            tableNameInput.placeholder = table.header.name || "";
+            tableNameInput.value = table.header.name;
+            tableScoringSelect.value = table.header.scoreMode;
             tableSettingsDialog.show();
         }
 
@@ -76,17 +78,44 @@ export class RankingsTabComponent implements Component
             }
 
             const name = tableNameInput.value.trim();
-            const scoring = tableScoringSelect.value;
+            const scoring = tableScoringSelect.value as api.ScoringType;
+            const nameChanged = name != "" && name != table.header.name;
+            const scoringChanged = scoring != table.header.scoreMode;
+            if (!nameChanged && !scoringChanged) {
+                return;
+            }
 
-            const changed = await table.header.changeSettings({
-                "name": name == "" ? undefined : name,
-                "scoring": scoring == "" ? undefined : scoring as api.ScoringType
+            const success = await table.header.changeSettings({
+                "name": nameChanged ? name : undefined,
+                "scoring": scoringChanged ? scoring : undefined
             });
 
-            if (changed) {
-                this.updateTables();
+            if (!success) {
+                this.app.errorDialog.showError("An error occured while changing the table settings.");
+                return;
             }
+
+            this.renderedTable = null;
+            this.updateTables();
         }
+
+        /* The confirmation is shown once the settings dialog is hidden, since Bootstrap cannot show two modals at once */
+        const btnDeleteTable = tableSettingsDialogView.querySelector("#btn-delete-table") as HTMLButtonElement;
+        btnDeleteTable.onclick = () => {
+            tableSettingsDialogView.addEventListener("hidden.bs.modal", async () => {
+                const table = await this.getActiveTable();
+                if (table == undefined) {
+                    return;
+                }
+
+                this.confirmDialog.show(
+                    `Do you want to delete the table '${table.header.name}' with all its entries?`,
+                    () => this.deleteTable(table.id)
+                );
+            }, { once: true });
+
+            tableSettingsDialog.hide();
+        };
 
         /* Create a table view whenever a table is selected */
         app.selectedTableId.subscribe(() => {
@@ -96,6 +125,23 @@ export class RankingsTabComponent implements Component
         this.renderTable();
     }
 
+    private async deleteTable(tableId: string)
+    {
+        const rankingId = this.app.selectedRankingId.value;
+        if (rankingId == null) {
+            return;
+        }
+
+        const res = await this.app.inputBlocker.runAsyncWithBlockedInput(() => api.deleteTable(this.app, tableId));
+        if (res == "error") {
+            this.app.errorDialog.showError("An error occured while deleting the table.");
+            return;
+        }
+
+        await this.app.rankingAccess.removeTable(rankingId, tableId);
+        await this.updateTables();
+    }
+
     private async addTable(name: string)
     {
         const rankingId = this.app.selectedRankingId.value;
@@ -103,41 +149,41 @@ export class RankingsTabComponent implements Component
             return;
         }
 
-        const res = await api.createTable(this.app, rankingId, name);
+        const res = await this.app.inputBlocker.runAsyncWithBlockedInput(() => api.createTable(this.app, rankingId, name));
         if (res == "error") {
             this.app.errorDialog.showError("An error occured while creating the table.");
             return;
         }
 
-        await this.app.rankingAccess.invalidateRanking(rankingId);
-        await this.updateTables(res);
+        await this.app.rankingAccess.addTable(rankingId, res);
+        await this.updateTables(res.id);
     }
 
+    /**
+     * Rebuilds the table tabs. The new tabs replace the old ones at once, so the header never shows an empty state.
+     */
     private updateTables(preferredTableId?: string): Promise<void>
     {
         return this.updateLock.withLock(() => this.app.inputBlocker.runAsyncWithBlockedInput(async () => {
             const header = this.view.querySelector("#tab-rankings-header") as HTMLElement;
             const btnTableSettings = this.view.querySelector("#btn-table-settings") as HTMLElement;
             const ul = this.view.querySelector("ul") as HTMLElement;
-            ul.replaceChildren(this.addTableItem);
 
             const rankingId = this.app.selectedRankingId.value;
             if (rankingId == null) {
+                ul.replaceChildren(this.addTableItem);
                 header.classList.toggle("d-none", true);
                 this.app.selectedTableId.value = null;
                 return;
             }
 
-            header.classList.toggle("d-none", false);
-
             const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(rankingId);
-            btnTableSettings.classList.toggle("d-none", tableHeaders.length == 0);
-            if (tableHeaders.length == 0) {
-                this.app.selectedTableId.value = null;
+            const tables = await Promise.all(tableHeaders.map(x => this.app.rankingAccess.getTable(x.id)));
+            if (rankingId !== this.app.selectedRankingId.value) {
                 return;
             }
 
-            const tables = await Promise.all(tableHeaders.map(x => this.app.rankingAccess.getTable(x.id)));
+            const items: Array<HTMLElement> = [];
             for (const table of tables) {
                 if (table == "error") {
                     continue;
@@ -151,14 +197,22 @@ export class RankingsTabComponent implements Component
                 btn.textContent = table.header.name;
                 btn.onclick = () => this.app.selectedTableId.value = table.id;
                 li.appendChild(btn);
-                ul.insertBefore(li, this.addTableItem);
+                items.push(li);
+            }
+
+            ul.replaceChildren(...items, this.addTableItem);
+            header.classList.toggle("d-none", false);
+            btnTableSettings.classList.toggle("d-none", tableHeaders.length == 0);
+
+            if (tableHeaders.length == 0) {
+                this.app.selectedTableId.value = null;
+                return;
             }
 
             const tableIds = tableHeaders.map(x => x.id);
             const current = this.app.selectedTableId.value;
             const target = [preferredTableId, current].find(x => x != undefined && tableIds.includes(x)) ?? tableIds[0]!;
 
-            /* Cached tables may have been replaced, so the view must be rebuilt even if the selection stays */
             if (target === current) {
                 this.highlightSelectedTable();
                 await this.renderTable();
@@ -175,23 +229,35 @@ export class RankingsTabComponent implements Component
         }
     }
 
+    /**
+     * Shows the selected table. The view is only rebuilt if the table changed, which happens when another table is
+     * selected or the cached ranking was reloaded.
+     */
     private renderTable(): Promise<void>
     {
         return this.app.inputBlocker.runAsyncWithBlockedInput(async () => {
             const tableView = this.view.querySelector("#table-view") as HTMLElement;
+            const tableId = this.app.selectedTableId.value;
 
-            if (this.app.selectedRankingId.value == null || this.app.selectedTableId.value == null) {
+            if (this.app.selectedRankingId.value == null || tableId == null) {
                 tableView.replaceChildren();
+                this.renderedTable = null;
                 return;
             }
 
             const table = await this.getActiveTable();
+            if (tableId !== this.app.selectedTableId.value || table === this.renderedTable) {
+                return;
+            }
+
             if (table == undefined) {
                 tableView.replaceChildren();
+                this.renderedTable = null;
                 this.app.errorDialog.showError("The selected table does not exist.");
                 return;
             }
 
+            this.renderedTable = table;
             tableView.replaceChildren(new MobileScoreTableComponent(this.app, table, this.confirmDialog).view);
         });
     }

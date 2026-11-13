@@ -117,7 +117,13 @@ export class SettingsTab implements Component
                 div.replaceChildren();
                 div.classList.add("d-none");
 
-                for (const ranking of await this.app.rankingAccess.getAllRankings()) {
+                const rankings = await this.app.rankingAccess.getAllRankings();
+                if (rankings == "error") {
+                    this.app.errorDialog.showError("An error occured while loading your rankings.");
+                    return;
+                }
+
+                for (const ranking of rankings) {
                     const active = ranking.id == this.app.selectedRankingId.value;
 
                     /* Fill text */

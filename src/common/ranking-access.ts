@@ -72,7 +72,7 @@ export class RankingAccess extends EventTarget
         await this.loadRanking(rankingId);
     }
 
-    getAllRankings(): Promise<Array<Ranking>>
+    getAllRankings(): Promise<Array<Ranking> | "error">
     {
         return this.rankingLock.withLock(async () => {
             if (this.rankings !== null) {
@@ -85,7 +85,7 @@ export class RankingAccess extends EventTarget
 
             const res = await api.fetchAllRankings(this.app);
             if (res == "error") {
-                return [];
+                return "error";
             }
 
             this.rankings = res.map(x => ({ "id": x.id, "name": x.name }));
@@ -168,6 +168,38 @@ export class RankingAccess extends EventTarget
     async invalidateRanking(rankingId: string)
     {
         this.rankingData.delete(rankingId);
+    }
+
+    /**
+     * Adds a newly created, empty table to the cached ranking. Reloads the ranking if it is not cached.
+     */
+    async addTable(rankingId: string, header: api.ScoreTableHeader)
+    {
+        const data = await this.rankingData.get(rankingId);
+        if (data === undefined || data == "error") {
+            this.invalidateRanking(rankingId);
+            return;
+        }
+
+        data.tables = [...data.tables, header];
+        data.tablesById.set(header.id, new ScoreTableWrapper(this.app, header, data.members, new Map(), []));
+        this.tableIdToRankingId.set(header.id, rankingId);
+    }
+
+    /**
+     * Removes a deleted table from the cached ranking.
+     */
+    async removeTable(rankingId: string, tableId: string)
+    {
+        const data = await this.rankingData.get(rankingId);
+        if (data === undefined || data == "error") {
+            this.invalidateRanking(rankingId);
+            return;
+        }
+
+        data.tables = data.tables.filter(x => x.id !== tableId);
+        data.tablesById.delete(tableId);
+        this.tableIdToRankingId.delete(tableId);
     }
 
     async getMembersForRanking(rankingId: string): Promise<Array<api.MemberInfo>>

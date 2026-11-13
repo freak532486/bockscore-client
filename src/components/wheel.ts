@@ -132,6 +132,7 @@ export class WheelComponent implements Component
 
     public spin(onWin: (entry: string) => void)
     {
+        void this.audioCtx.resume();
         this.stopTimeout();
 
         if (this._entries.length == 0) {

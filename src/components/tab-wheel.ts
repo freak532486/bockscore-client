@@ -48,7 +48,7 @@ export class WheelTabComponent implements Component {
             winnerSpan.textContent = entry;
 
             this.modal.show();
-            sndApplause.play();
+            sndApplause.play().catch(() => undefined);
 
             (dialogView.querySelector("#btn-wheel-remove") as HTMLButtonElement).onclick = () => {
                 onClose();

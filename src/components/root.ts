@@ -93,7 +93,7 @@ export class RootComponent implements Component
         const makeTabsSelectable = async () => {
             const selected = this.app.selectedRankingId.value;
             const allRankings = selected == null ? [] : await this.app.rankingAccess.getAllRankings();
-            if (selected !== this.app.selectedRankingId.value) {
+            if (selected !== this.app.selectedRankingId.value || allRankings == "error") {
                 return;
             }
 
@@ -123,7 +123,11 @@ export class RootComponent implements Component
         /* Make logout usable */
         const logoutButton = logoutDiv.querySelector("#btn-logout") as HTMLButtonElement;
         logoutButton.onclick = async () => {
-            await api.logout(app);
+            if (await api.logout(app) == "error") {
+                this.app.errorDialog.showError("An error occured while logging out.");
+                return;
+            }
+
             this.loginDialog.modal.show();
         }
 

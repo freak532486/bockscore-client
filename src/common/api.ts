@@ -118,14 +118,22 @@ export async function signin(app: App): Promise<"ok" | "error">
     return "ok";
 }
 
+/**
+ * The server answers a wrong password with 401, so this request must not be retried with a refreshed token. Instead,
+ * an expired token is refreshed beforehand.
+ */
 export async function deleteUser(app: App, password: string): Promise<"ok" | "bad_password" | "error">
 {
+    if (isTokenExpired(app.authToken.value) && await sharedSignin(app) == "error") {
+        return "error";
+    }
+
     const response = await authFetch(app, "/api/user/delete", {
         method: "POST",
         body: JSON.stringify({
             "password": password
         })
-    });
+    }, false);
 
     if (response.status == 401) {
         return "bad_password";
@@ -271,7 +279,7 @@ export async function fetchTablesForRanking(app: App, rankingId: string): Promis
 /**
  * Creates a table for a ranking and returns its id. Returns error on error.
  */
-export async function createTable(app: App, rankingId: string, name: string): Promise<string | "error">
+export async function createTable(app: App, rankingId: string, name: string): Promise<ScoreTableHeader | "error">
 {
     const defaultScoringType: ScoringType = "Magic";
 
@@ -288,13 +296,26 @@ export async function createTable(app: App, rankingId: string, name: string): Pr
         return "error";
     }
 
-    return (await response.json()).id;
+    const table = await response.json() as Partial<ScoreTableHeader> & { id: string };
+    return { "id": table.id, "name": table.name ?? name, "scoring": table.scoring ?? defaultScoringType };
 }
 
 export interface TableSettings
 {
     name: string | undefined,
     scoring: ScoringType | undefined
+}
+
+/**
+ * Deletes the given table with all its entries.
+ */
+export async function deleteTable(app: App, tableId: string): Promise<"ok" | "error">
+{
+    const response = await authFetch(app, "/api/scoreTable/" + tableId, {
+        method: "DELETE"
+    });
+
+    return response.ok ? "ok" : "error";
 }
 
 /**
@@ -611,6 +632,8 @@ export async function markOffEliminationEntry(
     return res.ok ? "ok" : "error";
 }
 
+const TOKEN_EXPIRY_MARGIN_MS = 10_000;
+
 let pendingSignin: Promise<"ok" | "error"> | null = null;
 
 /**
@@ -626,7 +649,27 @@ function sharedSignin(app: App): Promise<"ok" | "error">
     return pendingSignin;
 }
 
-async function authFetch(app: App, resource: string, options: RequestInit): Promise<Response>
+function isTokenExpired(token: string | null): boolean
+{
+    if (token == null) {
+        return true;
+    }
+
+    try {
+        const payload = token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/");
+        const exp = (JSON.parse(atob(payload)) as { exp?: number }).exp;
+        return exp !== undefined && exp * 1000 < Date.now() + TOKEN_EXPIRY_MARGIN_MS;
+    } catch {
+        return true;
+    }
+}
+
+async function authFetch(
+    app: App,
+    resource: string,
+    options: RequestInit,
+    refreshOnUnauthorized: boolean = true
+): Promise<Response>
 {
     const fetchWithToken = (token: string | null) => {
         const headers = new Headers(options.headers);
@@ -639,7 +682,7 @@ async function authFetch(app: App, resource: string, options: RequestInit): Prom
 
     const usedToken = app.authToken.value;
     const res1 = await fetchWithToken(usedToken);
-    if (res1.status !== 401) {
+    if (res1.status !== 401 || !refreshOnUnauthorized) {
         return res1;
     }
 

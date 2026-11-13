@@ -1,5 +1,6 @@
 import * as api from "../common/api";
 import type { App } from "../common/app";
+import { EVENT_RECONNECTED } from "../common/sse-handler";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -43,6 +44,13 @@ export class EliminationTabComponent implements Component
         app.sseHandler.subscribe("elimination_started", () => {
             this.resetRound();
             this.syncWithServer();
+        });
+
+        app.sseHandler.subscribe(EVENT_RECONNECTED, () => this.syncWithServer());
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                this.syncWithServer();
+            }
         });
 
         app.sseHandler.subscribe("elimination_changed", (_, senderId) => {

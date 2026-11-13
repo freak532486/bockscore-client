@@ -17,6 +17,8 @@ export class InputDialog implements Component
         this.modal = new Modal(this.view);
         this.primaryButton = this.view.querySelector(".btn-primary") as HTMLButtonElement;
 
+        this.view.addEventListener("show.bs.modal", () => this.hideNotification());
+
         /* Apply title */
         const titleSpan = this.view.querySelector(".modal-title") as HTMLElement;
         titleSpan.textContent = title;

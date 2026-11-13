@@ -1,5 +1,6 @@
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
+import "./message-box.css";
 import template from "./message-box.html";
 import { MessageBoxMessage } from "./message-box.message";
 
