@@ -45,6 +45,7 @@ export class EliminationTabComponent implements Component
         }
 
         app.selectedRankingId.subscribe(() => syncWithServer());
+        app.sseHandler.subscribe("elimination_started", () => syncWithServer());
         app.sseHandler.subscribe("elimination_changed", () => syncWithServer());
 
         /* Make import button work */

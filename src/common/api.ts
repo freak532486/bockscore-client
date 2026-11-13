@@ -220,11 +220,12 @@ interface UserInfo
 {
     id: string,
     name: string,
-    email: string,
-    password: string,
+    account?: {
+        email: string | null,
+        emailVerified: boolean
+    },
     role: string,
-    expiresAt: string,
-    createdAt: string
+    expiresAt?: string
 }
 
 async function updateUserInfo(app: App): Promise<"ok" | "error">

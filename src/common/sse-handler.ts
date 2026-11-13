@@ -1,11 +1,5 @@
 import type { App } from "./app";
 
-interface SSEEvent
-{
-    type: string,
-    data?: any
-}
-
 export type SSECallback = (data?: any) => void;
 
 export class SSEHandler
@@ -21,18 +15,11 @@ export class SSEHandler
             }
 
             this.eventSource = new EventSource("/api/ranking/" + rankingId + "/events");
-            this.eventSource.onmessage = (event) => {
-                const message = JSON.parse(event.data) as SSEEvent;
 
-                const handlers = this.handlers.get(message.type);
-                if (!handlers) {
-                    return;
-                }
-
-                for (const handler of handlers) {
-                    handler(message.data);
-                }
-            };
+            /* The server sends named events (`event: <type>`), so every type needs its own listener */
+            for (const type of this.handlers.keys()) {
+                this.listen(this.eventSource, type);
+            }
         }
 
         app.selectedRankingId.subscribe((val, prev) => {
@@ -58,8 +45,28 @@ export class SSEHandler
         if (!handlers) {
             handlers = new Set();
             this.handlers.set(type, handlers);
+
+            if (this.eventSource !== undefined) {
+                this.listen(this.eventSource, type);
+            }
         }
 
         handlers.add(fn);
+    }
+
+    private listen(eventSource: EventSource, type: string)
+    {
+        eventSource.addEventListener(type, (event: MessageEvent) => {
+            let data: any = undefined;
+            try {
+                data = event.data ? JSON.parse(event.data) : undefined;
+            } catch {
+                data = event.data;
+            }
+
+            for (const handler of this.handlers.get(type) ?? []) {
+                handler(data);
+            }
+        });
     }
 }
