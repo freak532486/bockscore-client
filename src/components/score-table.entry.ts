@@ -7,18 +7,16 @@ import detailsTemplate from "./score-table.details.html";
 import rowTemplate from "./score-table.entry.html";
 import { setupThumbnail } from "./thumbnail";
 
-export interface ScoreTableEntryActions
-{
-    toggle: () => void,
-    changed: () => void,
-    remove: () => void
+export interface ScoreTableEntryActions {
+    toggle: () => void;
+    changed: () => void;
+    remove: () => void;
 }
 
 /**
  * A row of the score table, which can be expanded to show the details and settings of the entry below it.
  */
-export class ScoreTableEntryComponent implements Component
-{
+export class ScoreTableEntryComponent implements Component {
     public readonly view: HTMLElement;
     private readonly rowElem: HTMLElement;
     private details: HTMLElement | null = null;
@@ -32,7 +30,7 @@ export class ScoreTableEntryComponent implements Component
         private readonly app: App,
         private readonly table: ScoreTableWrapper,
         private readonly row: ScoreTableRowWrapper,
-        private readonly actions: ScoreTableEntryActions
+        private readonly actions: ScoreTableEntryActions,
     ) {
         this.view = document.createElement("div");
         this.view.classList.add("score-entry");
@@ -44,8 +42,7 @@ export class ScoreTableEntryComponent implements Component
         this.loadThumbnail();
     }
 
-    update(expanded: boolean)
-    {
+    update(expanded: boolean) {
         if (!expanded) {
             this.editingName = false;
             this.nameDraft = null;
@@ -71,8 +68,7 @@ export class ScoreTableEntryComponent implements Component
         this.details = details;
     }
 
-    startNameEdit()
-    {
+    startNameEdit() {
         this.editingName = true;
         this.update(true);
 
@@ -81,14 +77,12 @@ export class ScoreTableEntryComponent implements Component
         input?.select();
     }
 
-    private get ownMemberId(): string | undefined
-    {
+    private get ownMemberId(): string | undefined {
         const userId = this.app.userId.value;
         return userId == null ? undefined : this.table.header.userToMemberId.get(userId);
     }
 
-    private renderRow()
-    {
+    private renderRow() {
         const row = this.row;
         (this.rowElem.querySelector(".name") as HTMLElement).textContent = row.name;
 
@@ -98,7 +92,8 @@ export class ScoreTableEntryComponent implements Component
         const ownMemberId = this.ownMemberId;
         const ownScore = ownMemberId == undefined ? undefined : row.getScore(ownMemberId);
         (this.rowElem.querySelector(".own-score") as HTMLElement).classList.toggle("d-none", ownMemberId == undefined);
-        (this.rowElem.querySelector(".own-score-value") as HTMLElement).textContent = ownScore == undefined ? "–" : String(ownScore);
+        (this.rowElem.querySelector(".own-score-value") as HTMLElement).textContent =
+            ownScore == undefined ? "–" : String(ownScore);
 
         const jokerText = this.rowElem.querySelector(".joker-text") as HTMLElement;
         jokerText.classList.toggle("d-none", row.jokerOf === null);
@@ -112,14 +107,16 @@ export class ScoreTableEntryComponent implements Component
         this.rowElem.setAttribute("aria-expanded", String(this.expanded));
     }
 
-    private renderDetails(): HTMLElement
-    {
+    private renderDetails(): HTMLElement {
         const details = htmlToElement(detailsTemplate);
         this.renderName(details);
         this.renderScores(details);
 
         const ownMemberId = this.ownMemberId;
-        (details.querySelector(".details-own-score") as HTMLElement).classList.toggle("d-none", ownMemberId == undefined);
+        (details.querySelector(".details-own-score") as HTMLElement).classList.toggle(
+            "d-none",
+            ownMemberId == undefined,
+        );
         (details.querySelector(".details-joker") as HTMLElement).classList.toggle("d-none", ownMemberId == undefined);
         if (ownMemberId != undefined) {
             this.renderOwnScore(details, ownMemberId);
@@ -132,8 +129,7 @@ export class ScoreTableEntryComponent implements Component
         return details;
     }
 
-    private renderName(details: HTMLElement)
-    {
+    private renderName(details: HTMLElement) {
         const display = details.querySelector(".details-name") as HTMLElement;
         const form = details.querySelector(".details-name-edit") as HTMLFormElement;
         const input = form.querySelector("input") as HTMLInputElement;
@@ -142,7 +138,7 @@ export class ScoreTableEntryComponent implements Component
         display.classList.toggle("d-none", this.editingName);
         form.classList.toggle("d-none", !this.editingName);
         input.value = this.nameDraft ?? this.row.name;
-        input.oninput = () => this.nameDraft = input.value;
+        input.oninput = () => (this.nameDraft = input.value);
 
         const cancel = () => {
             this.editingName = false;
@@ -152,13 +148,13 @@ export class ScoreTableEntryComponent implements Component
 
         (display.querySelector(".btn-edit-name") as HTMLButtonElement).onclick = () => this.startNameEdit();
         (form.querySelector(".btn-cancel-name") as HTMLButtonElement).onclick = cancel;
-        input.onkeydown = ev => {
+        input.onkeydown = (ev) => {
             if (ev.key === "Escape") {
                 cancel();
             }
         };
 
-        form.onsubmit = async ev => {
+        form.onsubmit = async (ev) => {
             ev.preventDefault();
 
             const name = input.value.trim();
@@ -179,8 +175,7 @@ export class ScoreTableEntryComponent implements Component
         };
     }
 
-    private renderScores(details: HTMLElement)
-    {
+    private renderScores(details: HTMLElement) {
         const tbody = details.querySelector(".details-scores tbody") as HTMLElement;
         const members = [...this.table.header.members].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -210,10 +205,10 @@ export class ScoreTableEntryComponent implements Component
         }
     }
 
-    private renderOwnScore(details: HTMLElement, ownMemberId: string)
-    {
+    private renderOwnScore(details: HTMLElement, ownMemberId: string) {
         const ownScore = this.row.getScore(ownMemberId);
-        (details.querySelector(".own-score-current") as HTMLElement).textContent = ownScore == undefined ? "–" : String(ownScore);
+        (details.querySelector(".own-score-current") as HTMLElement).textContent =
+            ownScore == undefined ? "–" : String(ownScore);
 
         const buttons = details.querySelector(".score-buttons") as HTMLElement;
         for (let score = 1; score <= 10; score++) {
@@ -241,8 +236,7 @@ export class ScoreTableEntryComponent implements Component
         }
     }
 
-    private renderJoker(details: HTMLElement, ownMemberId: string)
-    {
+    private renderJoker(details: HTMLElement, ownMemberId: string) {
         const btn = details.querySelector(".btn-joker") as HTMLButtonElement;
         const icon = btn.querySelector("i") as HTMLElement;
         const label = btn.querySelector("span") as HTMLElement;
@@ -264,7 +258,9 @@ export class ScoreTableEntryComponent implements Component
         }
 
         btn.onclick = async () => {
-            const success = await this.app.inputBlocker.runAsyncWithBlockedInput(() => this.table.setJoker(ownMemberId, this.row.id));
+            const success = await this.app.inputBlocker.runAsyncWithBlockedInput(() =>
+                this.table.setJoker(ownMemberId, this.row.id),
+            );
             if (!success) {
                 this.app.errorDialog.showError("An error occured while setting your joker.");
                 return;
@@ -274,8 +270,7 @@ export class ScoreTableEntryComponent implements Component
         };
     }
 
-    private renderImage(details: HTMLElement)
-    {
+    private renderImage(details: HTMLElement) {
         const preview = details.querySelector(".details-image-preview") as HTMLImageElement;
         const input = details.querySelector(".input-image") as HTMLInputElement;
         const btnPaste = details.querySelector(".btn-paste-image") as HTMLButtonElement;
@@ -321,8 +316,7 @@ export class ScoreTableEntryComponent implements Component
         };
     }
 
-    async uploadImage(file: File | undefined)
-    {
+    async uploadImage(file: File | undefined) {
         if (file === undefined) {
             return;
         }
@@ -338,7 +332,7 @@ export class ScoreTableEntryComponent implements Component
                 return `The image is too large (${Math.round(image.size / 1024)} KB).`;
             }
 
-            return await this.row.setImage(image) ? null : "An error occured while uploading the image.";
+            return (await this.row.setImage(image)) ? null : "An error occured while uploading the image.";
         });
 
         if (result !== null) {
@@ -351,14 +345,12 @@ export class ScoreTableEntryComponent implements Component
         this.actions.changed();
     }
 
-    private showImageError(message: string)
-    {
+    private showImageError(message: string) {
         this.imageError = message;
         this.update(this.expanded);
     }
 
-    private loadThumbnail()
-    {
+    private loadThumbnail() {
         const img = document.createElement("img");
         img.classList.add("thumb");
         img.alt = "";

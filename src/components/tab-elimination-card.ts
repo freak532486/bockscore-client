@@ -20,7 +20,7 @@ export class TabEliminationCardComponent implements Component {
         entry: api.EliminationEntry,
         loadImage: () => Promise<Blob | undefined>,
         imageViewer: ImageViewer,
-        onEliminate: () => void
+        onEliminate: () => void,
     ) {
         this._entry = entry;
         this.view = htmlToElement(template);
@@ -51,8 +51,7 @@ export class TabEliminationCardComponent implements Component {
         return this._entry;
     }
 
-    update(entry: api.EliminationEntry, removed: boolean, removedBy: string | null)
-    {
+    update(entry: api.EliminationEntry, removed: boolean, removedBy: string | null) {
         this._entry = entry;
         this.removed = removed;
 

@@ -3,7 +3,7 @@ import type { App } from "./app";
 /**
  * The sender id is the id of the user who caused the event.
  */
-export type SSECallback = (data?: any, senderId?: string) => void;
+export type SSECallback = (data?: unknown, senderId?: string) => void;
 
 /**
  * Pseudo event that is emitted after the connection was re-established. Events sent while the connection was down are
@@ -13,15 +13,14 @@ export const EVENT_RECONNECTED = "reconnected";
 
 const RECONNECT_DELAY_MS = 5000;
 
-export class SSEHandler
-{
+export class SSEHandler {
     private eventSource: EventSource | undefined;
     private rankingId: string | null = null;
     private reconnectTimeout: number | undefined;
     private handlers: Map<string, Set<SSECallback>> = new Map();
 
     constructor(app: App) {
-        app.selectedRankingId.subscribe(val => {
+        app.selectedRankingId.subscribe((val) => {
             this.rankingId = val;
             this.connect();
         });
@@ -36,8 +35,7 @@ export class SSEHandler
     /**
      * Subscribes to an event of the given type. The payload is given into the event handler.
      */
-    subscribe(type: string, fn: SSECallback)
-    {
+    subscribe(type: string, fn: SSECallback) {
         let handlers = this.handlers.get(type);
 
         if (!handlers) {
@@ -52,8 +50,7 @@ export class SSEHandler
         handlers.add(fn);
     }
 
-    private connect()
-    {
+    private connect() {
         window.clearTimeout(this.reconnectTimeout);
         this.eventSource?.close();
         this.eventSource = undefined;
@@ -92,17 +89,15 @@ export class SSEHandler
         };
     }
 
-    private emit(type: string, data?: any, senderId?: string)
-    {
+    private emit(type: string, data?: unknown, senderId?: string) {
         for (const handler of this.handlers.get(type) ?? []) {
             handler(data, senderId);
         }
     }
 
-    private listen(eventSource: EventSource, type: string)
-    {
+    private listen(eventSource: EventSource, type: string) {
         eventSource.addEventListener(type, (event: MessageEvent) => {
-            let data: any = undefined;
+            let data: unknown;
             try {
                 data = event.data ? JSON.parse(event.data) : undefined;
             } catch {

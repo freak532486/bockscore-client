@@ -8,7 +8,7 @@ export class Mutex {
             return () => this.unlock();
         }
 
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             this.waiters.push(() => {
                 this.locked = true;
                 resolve(() => this.unlock());

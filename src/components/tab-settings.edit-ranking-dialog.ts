@@ -1,27 +1,25 @@
 import { Modal } from "bootstrap";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./tab-settings.edit-ranking-dialog.html"
-import templateMemberEntry from "./tab-settings.edit-ranking-dialog.member.html"
+import template from "./tab-settings.edit-ranking-dialog.html";
+import templateMemberEntry from "./tab-settings.edit-ranking-dialog.member.html";
 import type { App } from "../common/app";
 import { RankingAccess } from "../common/ranking-access";
 
-export class EditRankingDialog implements Component
-{
+export class EditRankingDialog implements Component {
     public readonly view: HTMLElement;
     private readonly modal: Modal;
     public readonly primaryButton: HTMLButtonElement;
 
     private activeRankingId: string | undefined;
 
-    constructor(private readonly app: App)
-    {
+    constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         this.modal = new Modal(this.view);
         this.primaryButton = this.view.querySelector(".dialog-primary-button") as HTMLButtonElement;
 
         /* Refresh member list on change */
-        app.rankingAccess.addEventListener(RankingAccess.EVENT_MEMBERS_CHANGED, ev => {
+        app.rankingAccess.addEventListener(RankingAccess.EVENT_MEMBERS_CHANGED, (ev) => {
             const detail = (ev as CustomEvent).detail;
             if (detail !== this.activeRankingId) {
                 return;
@@ -31,8 +29,7 @@ export class EditRankingDialog implements Component
         });
     }
 
-    async show(rankingId: string)
-    {
+    async show(rankingId: string) {
         this.activeRankingId = rankingId;
         await this.refresh();
         this.modal.show();
@@ -44,24 +41,23 @@ export class EditRankingDialog implements Component
 
         btnInvite.onclick = async () => {
             const res = await this.app.rankingAccess.inviteMember(rankingId, inputInvite.value);
-            
+
             const isError = res == "error" || res == "user_not_found";
             alert.classList.toggle("d-none", !isError);
-            alert.classList.toggle("alert-danger", isError)
+            alert.classList.toggle("alert-danger", isError);
             if (res == "error") {
-                alert.textContent = "An error occured during invite."
+                alert.textContent = "An error occured during invite.";
             } else if (res == "user_not_found") {
-                alert.textContent = `User with name '${inputInvite.value}' not found.`
+                alert.textContent = `User with name '${inputInvite.value}' not found.`;
             }
-        }
+        };
     }
 
     hide() {
         this.modal.hide();
     }
 
-    async refresh()
-    {
+    async refresh() {
         if (this.activeRankingId == undefined) {
             return;
         }

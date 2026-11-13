@@ -1,12 +1,10 @@
 import { Modal } from "bootstrap";
 import { htmlToElement } from "../common/utils";
-import type { Component } from "./component"
-import template from "./input-dialog.html"
-import templateText from "./input-dialog.text.html"
+import type { Component } from "./component";
+import template from "./input-dialog.html";
+import templateText from "./input-dialog.text.html";
 
-export class InputDialog implements Component
-{
-
+export class InputDialog implements Component {
     public readonly view: HTMLElement;
     public readonly modal: Modal;
 
@@ -27,8 +25,7 @@ export class InputDialog implements Component
     /**
      * Adds a text input field to the dialog.
      */
-    addTextInput(id: string, label: string): HTMLInputElement
-    {
+    addTextInput(id: string, label: string): HTMLInputElement {
         const body = this.view.querySelector(".modal-body") as HTMLElement;
         const elem = htmlToElement(templateText);
         body.appendChild(elem);
@@ -43,18 +40,15 @@ export class InputDialog implements Component
         return domInput;
     }
 
-    showError(msg: string)
-    {
+    showError(msg: string) {
         const div = this.view.querySelector(".alert") as HTMLElement;
         div.textContent = msg;
         div.classList.remove("d-none");
         div.classList.add("alert-danger");
     }
 
-    hideNotification()
-    {
+    hideNotification() {
         const div = this.view.querySelector(".alert") as HTMLElement;
         div.classList.add("d-none");
     }
-
 }

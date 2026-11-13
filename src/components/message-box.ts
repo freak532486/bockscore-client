@@ -4,8 +4,7 @@ import "./message-box.css";
 import template from "./message-box.html";
 import { MessageBoxMessage } from "./message-box.message";
 
-export class MessageBox implements Component
-{
+export class MessageBox implements Component {
     public readonly view: HTMLElement;
     private readonly messages: HTMLElement;
 

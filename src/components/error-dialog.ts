@@ -1,10 +1,9 @@
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./error-dialog.html"
-import * as bootstrap from "bootstrap"
+import template from "./error-dialog.html";
+import * as bootstrap from "bootstrap";
 
-export class ErrorDialogComponent implements Component
-{
+export class ErrorDialogComponent implements Component {
     public readonly view: HTMLElement;
     private readonly modal: bootstrap.Modal;
 

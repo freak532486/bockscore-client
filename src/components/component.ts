@@ -1,5 +1,4 @@
 export interface Component {
-
     /**
      * The HTML-Element that represents this component.
      */
@@ -9,4 +8,4 @@ export interface Component {
      * Called whenever the component becomes visible as a tab.
      */
     onShow?(): void;
-};
+}

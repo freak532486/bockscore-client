@@ -5,20 +5,18 @@ import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { ConfirmDialog } from "./confirm-dialog";
 import { InputDialog } from "./input-dialog";
-import template from "./tab-settings.html"
-import rankingTemplate from "./tab-settings.ranking.html"
-import * as api from "../common/api"
+import template from "./tab-settings.html";
+import rankingTemplate from "./tab-settings.ranking.html";
+import * as api from "../common/api";
 import { EditRankingDialog } from "./tab-settings.edit-ranking-dialog";
 
-interface RankingSummary
-{
-    rankingId: string,
-    view: HTMLElement,
-    active: boolean
+interface RankingSummary {
+    rankingId: string;
+    view: HTMLElement;
+    active: boolean;
 }
 
-export class SettingsTab implements Component
-{
+export class SettingsTab implements Component {
     public readonly view: HTMLElement;
 
     private editRankingDialog: EditRankingDialog;
@@ -29,8 +27,7 @@ export class SettingsTab implements Component
     private shown = false;
     private pendingSummaries: Array<RankingSummary> = [];
 
-    constructor(private readonly app: App)
-    {
+    constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         this.editRankingDialog = new EditRankingDialog(app);
         document.body.appendChild(this.editRankingDialog.view);
@@ -55,7 +52,7 @@ export class SettingsTab implements Component
             }
 
             window.location.href = "/";
-        }
+        };
         document.body.appendChild(this.userDeleteConfirmDialog.view);
 
         /* Refresh ranking list on every user change */
@@ -87,7 +84,7 @@ export class SettingsTab implements Component
 
             this.activateRanking(res);
             addRankingDialog.modal.hide();
-        }
+        };
 
         /* Make delete user button work */
         const btnDeleteUser = this.view.querySelector("#btn-delete-user") as HTMLElement;
@@ -95,12 +92,11 @@ export class SettingsTab implements Component
 
         /* Update username span */
         const usernameDisplay = this.view.querySelector("strong.username") as HTMLElement;
-        app.username.subscribe((val, _) => usernameDisplay.textContent = val)
+        app.username.subscribe((val) => (usernameDisplay.textContent = val));
         usernameDisplay.textContent = app.username.value;
     }
 
-    onShow()
-    {
+    onShow() {
         this.shown = true;
         this.fillPendingSummaries();
     }
@@ -108,14 +104,12 @@ export class SettingsTab implements Component
     /**
      * Reloads the app with the given ranking active, so it is loaded behind the loading screen.
      */
-    private activateRanking(rankingId: string)
-    {
+    private activateRanking(rankingId: string) {
         this.app.selectedRankingId.value = rankingId;
         window.location.assign("/");
     }
 
-    private async updateRankingsView()
-    {
+    private async updateRankingsView() {
         const spinner = this.view.querySelector("div.spinner-border") as HTMLElement;
         const summaries: Array<RankingSummary> = [];
         await this.refreshLock.withLock(async () => {
@@ -136,7 +130,8 @@ export class SettingsTab implements Component
 
                     /* Fill text */
                     const entry = htmlToElement(rankingTemplate);
-                    (entry.querySelector(".ranking-name") as HTMLElement).textContent = ranking.name + (active ? " (Active)" : "");
+                    (entry.querySelector(".ranking-name") as HTMLElement).textContent =
+                        ranking.name + (active ? " (Active)" : "");
 
                     const summary = entry.querySelector(".ranking-summary") as HTMLElement;
                     summary.textContent = "Loading…";
@@ -161,11 +156,13 @@ export class SettingsTab implements Component
                                 this.app.selectedRankingId.value = null;
                             }
                         });
-                    }
+                    };
 
                     /* Rename button */
                     const btnRename = entry.querySelector(".btn-edit-ranking") as HTMLButtonElement;
-                    const inputRankingName = this.editRankingDialog.view.querySelector("#input-ranking-name") as HTMLInputElement;
+                    const inputRankingName = this.editRankingDialog.view.querySelector(
+                        "#input-ranking-name",
+                    ) as HTMLInputElement;
                     btnRename.onclick = async () => {
                         inputRankingName.value = "";
                         this.editRankingDialog.show(ranking.id);
@@ -179,8 +176,8 @@ export class SettingsTab implements Component
                             if (res == "error") {
                                 this.app.errorDialog.showError("An error occured while renaming the ranking.");
                             }
-                        }
-                    }
+                        };
+                    };
 
                     div.appendChild(entry);
                 }
@@ -192,24 +189,22 @@ export class SettingsTab implements Component
         });
 
         /* The active ranking is loaded anyway. Other rankings are only loaded once this tab is actually viewed. */
-        this.pendingSummaries = summaries.filter(x => !x.active);
-        await Promise.all(summaries.filter(x => x.active).map(x => this.fillSummary(x)));
+        this.pendingSummaries = summaries.filter((x) => !x.active);
+        await Promise.all(summaries.filter((x) => x.active).map((x) => this.fillSummary(x)));
         this.fillPendingSummaries();
     }
 
-    private fillPendingSummaries()
-    {
+    private fillPendingSummaries() {
         if (!this.shown) {
             return;
         }
 
         const summaries = this.pendingSummaries;
         this.pendingSummaries = [];
-        summaries.forEach(x => this.fillSummary(x));
+        summaries.forEach((x) => this.fillSummary(x));
     }
 
-    private async fillSummary(summary: RankingSummary)
-    {
+    private async fillSummary(summary: RankingSummary) {
         const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(summary.rankingId);
 
         let numEntries = 0;

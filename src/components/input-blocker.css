@@ -9,7 +9,9 @@
 
     background: rgba(0, 0, 0, 0);
     opacity: 0;
-    transition: background-color .2s, opacity .2s;
+    transition:
+        background-color 0.2s,
+        opacity 0.2s;
 
     /* Blocks all mouse/touch input */
     pointer-events: auto;
@@ -23,6 +25,6 @@
 }
 
 #inputBlocker.show-feedback {
-    background: rgba(0, 0, 0, .35);
+    background: rgba(0, 0, 0, 0.35);
     opacity: 1;
 }

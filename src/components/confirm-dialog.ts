@@ -1,10 +1,9 @@
 import { Modal } from "bootstrap";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./confirm-dialog.html"
+import template from "./confirm-dialog.html";
 
-export class ConfirmDialog implements Component
-{
+export class ConfirmDialog implements Component {
     public readonly view: HTMLElement;
     public readonly modal: Modal;
 
@@ -13,8 +12,7 @@ export class ConfirmDialog implements Component
         this.modal = new Modal(this.view);
     }
 
-    show(msg: string, onYes: () => void)
-    {
+    show(msg: string, onYes: () => void) {
         const confirmMsg = this.view.querySelector("#confirm-msg") as HTMLElement;
         const btnYes = this.view.querySelector("#btn-yes") as HTMLElement;
 

@@ -1,15 +1,24 @@
 <div class="entry-details d-flex flex-column gap-3">
     <div class="details-name d-flex align-items-center gap-2">
         <span class="details-title fs-5 fw-semibold text-break"></span>
-        <button type="button" class="btn btn-link link-body-emphasis p-0 btn-edit-name" title="Rename entry" aria-label="Rename entry">
+        <button
+            type="button"
+            class="btn btn-link link-body-emphasis p-0 btn-edit-name"
+            title="Rename entry"
+            aria-label="Rename entry"
+        >
             <i class="bi bi-pencil"></i>
         </button>
     </div>
 
     <form class="details-name-edit input-group d-none">
-        <input type="text" class="form-control" aria-label="Entry name">
-        <button type="submit" class="btn btn-primary" title="Save name" aria-label="Save name"><i class="bi bi-check-lg"></i></button>
-        <button type="button" class="btn btn-outline-secondary btn-cancel-name" title="Cancel" aria-label="Cancel"><i class="bi bi-x-lg"></i></button>
+        <input type="text" class="form-control" aria-label="Entry name" />
+        <button type="submit" class="btn btn-primary" title="Save name" aria-label="Save name">
+            <i class="bi bi-check-lg"></i>
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-cancel-name" title="Cancel" aria-label="Cancel">
+            <i class="bi bi-x-lg"></i>
+        </button>
     </form>
 
     <table class="table table-sm mb-0 details-scores">
@@ -22,24 +31,42 @@
     </div>
 
     <div class="details-joker">
-        <button type="button" class="btn btn-sm btn-outline-warning btn-joker"><i class="bi bi-star"></i> <span>Make my joker</span></button>
+        <button type="button" class="btn btn-sm btn-outline-warning btn-joker">
+            <i class="bi bi-star"></i> <span>Make my joker</span>
+        </button>
     </div>
 
     <div class="details-image">
         <div class="small text-body-secondary mb-1">Image</div>
         <div class="d-flex align-items-center gap-2">
-            <img class="details-image-preview d-none" src="/images/placeholder.png" alt="">
+            <img class="details-image-preview d-none" src="/images/placeholder.png" alt="" />
             <label class="btn btn-sm btn-outline-secondary mb-0">
                 <i class="bi bi-upload"></i> Upload
-                <input type="file" class="input-image d-none" accept="image/png,image/jpeg">
+                <input type="file" class="input-image d-none" accept="image/png,image/jpeg" />
             </label>
-            <button type="button" class="btn btn-sm btn-outline-secondary btn-paste-image" title="Paste image" aria-label="Paste image"><i class="bi bi-clipboard"></i></button>
-            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-image d-none" title="Remove image" aria-label="Remove image"><i class="bi bi-trash3"></i></button>
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary btn-paste-image"
+                title="Paste image"
+                aria-label="Paste image"
+            >
+                <i class="bi bi-clipboard"></i>
+            </button>
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-danger btn-remove-image d-none"
+                title="Remove image"
+                aria-label="Remove image"
+            >
+                <i class="bi bi-trash3"></i>
+            </button>
         </div>
         <div class="image-error small text-danger mt-1 d-none"></div>
     </div>
 
     <div class="border-top pt-3">
-        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry"><i class="bi bi-trash3"></i> Delete entry</button>
+        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-entry">
+            <i class="bi bi-trash3"></i> Delete entry
+        </button>
     </div>
 </div>

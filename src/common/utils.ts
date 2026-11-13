@@ -1,8 +1,7 @@
 /**
  * Reads the HTML of a component and returns the element for this component.
  */
-export function htmlToElement(html: string): HTMLElement
-{
+export function htmlToElement(html: string): HTMLElement {
     const root = document.createElement("template");
     root.innerHTML = html.trim();
 

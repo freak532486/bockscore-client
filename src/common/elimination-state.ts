@@ -4,25 +4,22 @@ import { EVENT_RECONNECTED } from "./sse-handler";
 
 const REMOVED_BY_STORAGE_PREFIX = "eliminationRemovedBy_";
 
-export interface EliminationImportSettings
-{
-    entriesPerTable: number,
-    weightedImport: boolean
+export interface EliminationImportSettings {
+    entriesPerTable: number;
+    weightedImport: boolean;
 }
 
-export interface EliminationItem
-{
-    entry: api.EliminationEntry,
-    removed: boolean,
-    removedBy: string | null
+export interface EliminationItem {
+    entry: api.EliminationEntry;
+    removed: boolean;
+    removedBy: string | null;
 }
 
 /**
  * The elimination list of the selected ranking, kept in sync with the server and other clients. Dispatches
  * EVENT_CHANGED whenever the list changes.
  */
-export class EliminationState extends EventTarget
-{
+export class EliminationState extends EventTarget {
     public static readonly EVENT_CHANGED = "changed";
 
     private rankingId: string | null = null;
@@ -39,8 +36,7 @@ export class EliminationState extends EventTarget
     private memberNames = new Map<string, string>();
     private syncGeneration = 0;
 
-    constructor(private readonly app: App)
-    {
+    constructor(private readonly app: App) {
         super();
 
         app.selectedRankingId.subscribe(() => this.onRankingChanged());
@@ -70,13 +66,12 @@ export class EliminationState extends EventTarget
     /**
      * All entries, jokers first and then by name.
      */
-    get items(): Array<EliminationItem>
-    {
+    get items(): Array<EliminationItem> {
         return this.serverEntries
-            .map(entry => ({
+            .map((entry) => ({
                 entry,
                 removed: this.isRemoved(entry),
-                removedBy: this.removedBy.get(entry.entryId) ?? null
+                removedBy: this.removedBy.get(entry.entryId) ?? null,
             }))
             .sort((a, b) => {
                 if (a.entry.isJoker !== b.entry.isJoker) {
@@ -87,16 +82,14 @@ export class EliminationState extends EventTarget
             });
     }
 
-    get remainingEntryNames(): Array<string>
-    {
-        return this.items.filter(x => !x.removed).map(x => x.entry.name);
+    get remainingEntryNames(): Array<string> {
+        return this.items.filter((x) => !x.removed).map((x) => x.entry.name);
     }
 
     /**
      * Removes the entry. The change is applied immediately and reverted if the server rejects it.
      */
-    async eliminate(entry: api.EliminationEntry)
-    {
+    async eliminate(entry: api.EliminationEntry) {
         const rankingId = this.rankingId;
         if (rankingId == null || this.isRemoved(entry)) {
             return;
@@ -135,8 +128,7 @@ export class EliminationState extends EventTarget
      * Starts a new elimination with a random selection of entries from every table of the selected ranking. Jokers are
      * always included.
      */
-    async importFromRanking(settings: EliminationImportSettings)
-    {
+    async importFromRanking(settings: EliminationImportSettings) {
         const rankingId = this.rankingId;
         if (rankingId == null) {
             return;
@@ -149,16 +141,16 @@ export class EliminationState extends EventTarget
                 continue;
             }
 
-            const jokers = table.rows.filter(x => x.jokerOf !== null);
+            const jokers = table.rows.filter((x) => x.jokerOf !== null);
             const candidates = table.rows
-                .filter(x => x.jokerOf === null)
-                .map(x => ({
+                .filter((x) => x.jokerOf === null)
+                .map((x) => ({
                     id: x.id,
-                    weight: settings.weightedImport ? (x.getAvgScore(table.header.scoreMode) ?? 0) : 1
+                    weight: settings.weightedImport ? (x.getAvgScore(table.header.scoreMode) ?? 0) : 1,
                 }));
 
             const count = Math.max(0, settings.entriesPerTable - jokers.length);
-            selection.push(...jokers.map(x => x.id), ...weightedRandomSelection(candidates, count));
+            selection.push(...jokers.map((x) => x.id), ...weightedRandomSelection(candidates, count));
         }
 
         const res = await api.updateEliminationTable(this.app, rankingId, selection);
@@ -171,8 +163,7 @@ export class EliminationState extends EventTarget
         this.sync();
     }
 
-    private onRankingChanged()
-    {
+    private onRankingChanged() {
         this.rankingId = this.app.selectedRankingId.value;
         this.serverEntries = [];
         this.ownRemovals.clear();
@@ -187,8 +178,7 @@ export class EliminationState extends EventTarget
         }
     }
 
-    private async loadMemberNames(rankingId: string)
-    {
+    private async loadMemberNames(rankingId: string) {
         const members = await this.app.rankingAccess.getMembersForRanking(rankingId);
         if (rankingId !== this.rankingId) {
             return;
@@ -201,16 +191,14 @@ export class EliminationState extends EventTarget
         }
     }
 
-    private resetRound()
-    {
+    private resetRound() {
         this.ownRemovals.clear();
         this.pendingOwnEvents = 0;
         this.removedBy.clear();
         this.saveRemovedBy();
     }
 
-    private isRemoved(entry: api.EliminationEntry): boolean
-    {
+    private isRemoved(entry: api.EliminationEntry): boolean {
         return entry.markedOff || this.ownRemovals.has(entry.entryId);
     }
 
@@ -218,8 +206,7 @@ export class EliminationState extends EventTarget
      * Fetches the elimination list and applies the differences. A sender id attributes newly removed entries to that
      * user.
      */
-    private async sync(senderId?: string)
-    {
+    private async sync(senderId?: string) {
         const rankingId = this.rankingId;
         if (rankingId == null) {
             return;
@@ -236,11 +223,11 @@ export class EliminationState extends EventTarget
             return;
         }
 
-        const previousIds = new Set(this.serverEntries.map(x => x.entryId));
-        const sameRound = previousIds.size == res.length && res.every(x => previousIds.has(x.entryId));
+        const previousIds = new Set(this.serverEntries.map((x) => x.entryId));
+        const sameRound = previousIds.size == res.length && res.every((x) => previousIds.has(x.entryId));
 
         if (sameRound) {
-            const previous = new Map(this.serverEntries.map(x => [x.entryId, x]));
+            const previous = new Map(this.serverEntries.map((x) => [x.entryId, x]));
             for (const entry of res) {
                 if (!entry.markedOff || this.isRemoved(previous.get(entry.entryId)!)) {
                     continue;
@@ -251,13 +238,15 @@ export class EliminationState extends EventTarget
                     this.removedBy.set(entry.entryId, remover);
                 }
 
-                this.app.messageBox.showMessage(`'${entry.name}' was removed` + (remover === undefined ? "." : ` by ${remover}.`));
+                this.app.messageBox.showMessage(
+                    `'${entry.name}' was removed` + (remover === undefined ? "." : ` by ${remover}.`),
+                );
             }
         } else if (this.serverEntries.length > 0) {
             this.resetRound();
         }
 
-        const ids = new Set(res.map(x => x.entryId));
+        const ids = new Set(res.map((x) => x.entryId));
         for (const entryId of [...this.removedBy.keys()]) {
             if (!ids.has(entryId)) {
                 this.removedBy.delete(entryId);
@@ -269,13 +258,11 @@ export class EliminationState extends EventTarget
         this.notifyChanged();
     }
 
-    private notifyChanged()
-    {
+    private notifyChanged() {
         this.dispatchEvent(new CustomEvent(EliminationState.EVENT_CHANGED));
     }
 
-    private saveRemovedBy()
-    {
+    private saveRemovedBy() {
         if (this.rankingId == null) {
             return;
         }
@@ -283,18 +270,18 @@ export class EliminationState extends EventTarget
         try {
             window.localStorage.setItem(
                 REMOVED_BY_STORAGE_PREFIX + this.rankingId,
-                JSON.stringify(Object.fromEntries(this.removedBy))
+                JSON.stringify(Object.fromEntries(this.removedBy)),
             );
         } catch {
+            /* Storage can be unavailable, e.g. in private browsing. The attribution is then only kept in memory. */
         }
     }
 }
 
-function loadRemovedBy(rankingId: string): Map<string, string>
-{
+function loadRemovedBy(rankingId: string): Map<string, string> {
     try {
         const stored = window.localStorage.getItem(REMOVED_BY_STORAGE_PREFIX + rankingId);
-        return new Map(Object.entries(stored == null ? {} : JSON.parse(stored) as Record<string, string>));
+        return new Map(Object.entries(stored == null ? {} : (JSON.parse(stored) as Record<string, string>)));
     } catch {
         return new Map();
     }
@@ -304,9 +291,8 @@ function loadRemovedBy(rankingId: string): Map<string, string>
  * Selects up to n distinct ids, each with a probability proportional to its weight. Entries with a weight of 0 are
  * never selected.
  */
-function weightedRandomSelection(candidates: Array<{ id: string, weight: number }>, n: number): Array<string>
-{
-    const pool = candidates.filter(x => x.weight > 0);
+function weightedRandomSelection(candidates: Array<{ id: string; weight: number }>, n: number): Array<string> {
+    const pool = candidates.filter((x) => x.weight > 0);
     const result: Array<string> = [];
 
     n = Math.min(n, pool.length);

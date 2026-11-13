@@ -17,8 +17,7 @@ const TAB_TABLES = 0;
 const TAB_SETTINGS = 3;
 const TAB_PATHS = ["/tables", "/elimination", "/wheel", "/settings"];
 
-export class RootComponent implements Component
-{
+export class RootComponent implements Component {
     public readonly view: HTMLElement;
     private readonly loginDialog: LoginDialogComponent;
     private readonly registerDialog: InputDialog;
@@ -26,8 +25,7 @@ export class RootComponent implements Component
     private readonly tabButtons: Array<HTMLButtonElement>;
     private tabBeforeRedirect: number | null = null;
 
-    constructor(private readonly app: App)
-    {
+    constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
 
@@ -47,10 +45,10 @@ export class RootComponent implements Component
             new RankingsTabComponent(app),
             new EliminationTabComponent(app),
             new WheelTabComponent(app),
-            new SettingsTab(app)
+            new SettingsTab(app),
         ];
 
-        this.tabs.forEach(x => {
+        this.tabs.forEach((x) => {
             tabRoot.appendChild(x.view);
             x.view.classList.add("d-none");
         });
@@ -59,7 +57,7 @@ export class RootComponent implements Component
         const navbarContent = this.view.querySelector("#navbarContent") as HTMLElement;
         const navbarCollapse = new Collapse(navbarContent, { toggle: false });
         const navbarToggler = this.view.querySelector(".navbar-toggler") as HTMLButtonElement;
-        navbarContent.addEventListener("click", ev => {
+        navbarContent.addEventListener("click", (ev) => {
             const button = (ev.target as Element).closest("button");
             if (button === null) {
                 return;
@@ -72,10 +70,13 @@ export class RootComponent implements Component
 
         /* Make tabs switchable */
         this.tabButtons = [...this.view.querySelectorAll(".tabs .nav-link")] as Array<HTMLButtonElement>;
-        this.tabButtons.forEach((button, i) => button.onclick = () => {
-            this.tabBeforeRedirect = null;
-            this.navigate(i, "push");
-        });
+        this.tabButtons.forEach(
+            (button, i) =>
+                (button.onclick = () => {
+                    this.tabBeforeRedirect = null;
+                    this.navigate(i, "push");
+                }),
+        );
         window.addEventListener("popstate", () => this.navigate(this.tabFromLocation(), "replace"));
 
         /* Restore the selected ranking, which also decides the initial tab */
@@ -89,12 +90,12 @@ export class RootComponent implements Component
                 return;
             }
 
-            const activeRankingExists = allRankings.some(x => x.id == selected);
+            const activeRankingExists = allRankings.some((x) => x.id == selected);
             this.setRankingTabsVisible(activeRankingExists);
             if (!activeRankingExists) {
                 this.navigate(TAB_SETTINGS, "replace");
             }
-        }
+        };
 
         this.app.selectedRankingId.subscribe(() => makeTabsSelectable());
         this.app.rankingAccess.addEventListener(RankingAccess.EVENT_RANKINGS_CHANGED, () => makeTabsSelectable());
@@ -108,20 +109,20 @@ export class RootComponent implements Component
 
             loginDiv.classList.toggle("d-none", loggedIn);
             logoutDiv.classList.toggle("d-none", !loggedIn);
-        }
+        };
         app.authToken.subscribe(() => loginButtonUpdate());
         loginButtonUpdate();
 
         /* Make logout usable */
         const logoutButton = logoutDiv.querySelector("#btn-logout") as HTMLButtonElement;
         logoutButton.onclick = async () => {
-            if (await api.logout(app) == "error") {
+            if ((await api.logout(app)) == "error") {
                 this.app.errorDialog.showError("An error occured while logging out.");
                 return;
             }
 
             this.loginDialog.modal.show();
-        }
+        };
 
         /* Make login usable */
         this.loginDialog = new LoginDialogComponent(app);
@@ -135,7 +136,7 @@ export class RootComponent implements Component
 
         /* Auto-update username */
         const usernameSpan = logoutDiv.querySelector(".username") as HTMLSpanElement;
-        const usernameUpdate = () => usernameSpan.textContent = app.username.value || "undefined";
+        const usernameUpdate = () => (usernameSpan.textContent = app.username.value || "undefined");
         app.username.subscribe(() => usernameUpdate());
         usernameUpdate();
 
@@ -156,8 +157,7 @@ export class RootComponent implements Component
      * Shows the given tab and updates the URL. Navigation by the user adds a history entry, while redirects replace the
      * current one, so the back button never leads to a page that immediately redirects again.
      */
-    private navigate(index: number, mode: "push" | "replace")
-    {
+    private navigate(index: number, mode: "push" | "replace") {
         const path = TAB_PATHS[index]!;
         if (window.location.pathname !== path) {
             if (mode === "push") {
@@ -174,8 +174,7 @@ export class RootComponent implements Component
      * The tab requested by the URL. Unknown paths lead to the tables, and tabs other than settings need a selected
      * ranking.
      */
-    private tabFromLocation(): number
-    {
+    private tabFromLocation(): number {
         const index = TAB_PATHS.indexOf(window.location.pathname.replace(/\/+$/, ""));
         const requested = index === -1 ? TAB_TABLES : index;
         if (requested !== TAB_SETTINGS && this.app.selectedRankingId.value == null) {
@@ -186,28 +185,24 @@ export class RootComponent implements Component
         return requested;
     }
 
-    private showTab(index: number)
-    {
+    private showTab(index: number) {
         this.tabButtons.forEach((button, i) => button.classList.toggle("active", i === index));
         this.tabs.forEach((tab, i) => tab.view.classList.toggle("d-none", i !== index));
         this.tabs[index]?.onShow?.();
     }
 
-    private setRankingTabsVisible(visible: boolean)
-    {
+    private setRankingTabsVisible(visible: boolean) {
         this.tabButtons.forEach((button, i) => button.classList.toggle("d-none", i !== TAB_SETTINGS && !visible));
     }
 
-    private toggleDarkMode()
-    {
+    private toggleDarkMode() {
         const curMode = document.documentElement.getAttribute("data-bs-theme");
         const newMode = curMode == "light" ? "dark" : "light";
 
         this.setTheme(newMode);
     }
 
-    private setTheme(theme: "light" | "dark")
-    {
+    private setTheme(theme: "light" | "dark") {
         const btnDesktop = this.view.querySelector("#btn-theme-desktop") as HTMLButtonElement;
         const btnMobile = this.view.querySelector("#btn-theme-mobile") as HTMLButtonElement;
 
@@ -223,8 +218,7 @@ export class RootComponent implements Component
         window.localStorage.setItem("theme", theme);
     }
 
-    private createRegisterDialog(): InputDialog
-    {
+    private createRegisterDialog(): InputDialog {
         /* Setup dialog */
         const registerDialog = new InputDialog("Register new user");
         const inputUser = registerDialog.addTextInput("input-username", "Username");
@@ -251,7 +245,7 @@ export class RootComponent implements Component
         registerLink.onclick = () => {
             this.loginDialog.modal.hide();
             this.registerDialog.modal.show();
-        }
+        };
 
         /* Send registration request on submit */
         registerDialog.primaryButton.onclick = async () => {
@@ -261,10 +255,10 @@ export class RootComponent implements Component
             }
 
             const req: api.RegisterRequest = {
-                "name": inputUser.value.trim(),
-                "email": inputEmail.value.trim(),
-                "password": inputPw.value
-            }
+                name: inputUser.value.trim(),
+                email: inputEmail.value.trim(),
+                password: inputPw.value,
+            };
 
             const validationError = validateRegistrationRequest(req);
             if (validationError !== null) {
@@ -285,7 +279,7 @@ export class RootComponent implements Component
 
             // Reload page, user will be logged in automatically thanks to refresh token cookie.
             window.location.href = "/";
-        }
+        };
 
         return registerDialog;
     }
@@ -294,11 +288,10 @@ export class RootComponent implements Component
      * The selected ranking is stored by user id, because the user id is known right after sign in, while the username
      * needs another request.
      */
-    private syncRankingFromLocalStorage()
-    {
+    private syncRankingFromLocalStorage() {
         const storageKey = (userId: string) => "selectedRanking_" + userId;
 
-        this.app.selectedRankingId.subscribe(val => {
+        this.app.selectedRankingId.subscribe((val) => {
             if (this.app.userId.value == null) {
                 return;
             }
@@ -351,8 +344,7 @@ export class RootComponent implements Component
     }
 }
 
-function validateRegistrationRequest(req: api.RegisterRequest): string | null
-{
+function validateRegistrationRequest(req: api.RegisterRequest): string | null {
     if (req.name.length == 0) {
         return "Username is required.";
     }

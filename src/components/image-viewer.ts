@@ -3,8 +3,7 @@ import type { Component } from "./component";
 import "./image-viewer.css";
 import template from "./image-viewer.html";
 
-export class ImageViewer implements Component
-{
+export class ImageViewer implements Component {
     public readonly view: HTMLElement;
     private readonly img: HTMLImageElement;
     private readonly caption: HTMLElement;
@@ -16,15 +15,14 @@ export class ImageViewer implements Component
         this.caption = this.view.querySelector("figcaption") as HTMLElement;
 
         this.view.onclick = () => this.hide();
-        document.addEventListener("keydown", ev => {
+        document.addEventListener("keydown", (ev) => {
             if (ev.key === "Escape") {
                 this.hide();
             }
         });
     }
 
-    show(image: Blob, caption: string)
-    {
+    show(image: Blob, caption: string) {
         this.hide();
 
         this.url = URL.createObjectURL(image);
@@ -34,8 +32,7 @@ export class ImageViewer implements Component
         this.view.classList.remove("d-none");
     }
 
-    hide()
-    {
+    hide() {
         this.view.classList.add("d-none");
         this.img.removeAttribute("src");
 

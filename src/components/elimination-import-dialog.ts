@@ -2,10 +2,9 @@ import { Modal } from "bootstrap";
 import type { EliminationImportSettings } from "../common/elimination-state";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./elimination-import-dialog.html"
+import template from "./elimination-import-dialog.html";
 
-export class EliminationImportDialog implements Component
-{
+export class EliminationImportDialog implements Component {
     public readonly view;
     private modal: Modal;
 
@@ -32,6 +31,6 @@ export class EliminationImportDialog implements Component
 
             this.modal.hide();
             onSubmit({ entriesPerTable: num, weightedImport: inputWeighted.checked });
-        }
+        };
     }
 }

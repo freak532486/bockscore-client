@@ -1,23 +1,33 @@
 {
-  "name": "bockscore-client",
-  "version": "1.0.0",
-  "description": "An alternative client to the bockscore app.",
-  "scripts": {
-    "start": "serve -s -l tcp://0.0.0.0:3000",
-    "build": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js",
-    "dev": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js --watch",
-    "check": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "@popperjs/core": "^2.11.8",
-    "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.1",
-    "browser-image-compression": "^2.0.2",
-    "serve": "^14.2.6"
-  },
-  "devDependencies": {
-    "@types/bootstrap": "^5.2.11",
-    "esbuild": "^0.28.1",
-    "typescript": "^6.0.3"
-  }
+    "name": "bockscore-client",
+    "version": "1.0.0",
+    "description": "An alternative client to the bockscore app.",
+    "scripts": {
+        "start": "serve -s -l tcp://0.0.0.0:3000",
+        "build": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js",
+        "dev": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js --watch",
+        "check": "tsc -p tsconfig.json --noEmit",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
+    },
+    "dependencies": {
+        "@popperjs/core": "^2.11.8",
+        "bootstrap": "^5.3.8",
+        "bootstrap-icons": "^1.13.1",
+        "browser-image-compression": "^2.0.2",
+        "serve": "^14.2.6"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@types/bootstrap": "^5.2.11",
+        "esbuild": "^0.28.1",
+        "eslint": "^10.14.0",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^17.14.0",
+        "prettier": "^3.10.1",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.72.2"
+    }
 }

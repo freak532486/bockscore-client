@@ -6,13 +6,7 @@ import dialogTemplate from "./tab-wheel.dialog.html";
 import template from "./tab-wheel.html";
 import { WheelComponent } from "./wheel";
 
-const INITIAL_ENTRIES = [
-    "Apple",
-    "Banana",
-    "Cherry",
-    "Dates",
-    "Elderberries"
-];
+const INITIAL_ENTRIES = ["Apple", "Banana", "Cherry", "Dates", "Elderberries"];
 
 export class WheelTabComponent implements Component {
     public readonly view;
@@ -55,16 +49,19 @@ export class WheelTabComponent implements Component {
 
                 wheel.removeEntry(entry);
                 textarea.value = wheel.entries.join("\n");
-            }
-        }
+            };
+        };
 
         wheel.view.onclick = () => wheel.spin(onWin);
 
         /* Update entries on text area change */
         textarea.oninput = () => {
-            const entries = textarea.value.split("\n").map(x => x.trim()).filter(x => x != "");
+            const entries = textarea.value
+                .split("\n")
+                .map((x) => x.trim())
+                .filter((x) => x != "");
             wheel.entries = entries;
-        }
+        };
 
         /* Make import button work */
         const btnImport = this.view.querySelector("#btn-wheel-import") as HTMLButtonElement;
@@ -76,7 +73,7 @@ export class WheelTabComponent implements Component {
 
             wheel.entries = app.elimination.remainingEntryNames;
             textarea.value = wheel.entries.join("\n");
-        }
+        };
 
         /* Make shuffle button work */
         const btnShuffle = this.view.querySelector("#btn-shuffle") as HTMLButtonElement;
@@ -85,14 +82,14 @@ export class WheelTabComponent implements Component {
             shuffle(entries);
             wheel.entries = entries;
             textarea.value = entries.join("\n");
-        }
+        };
     }
 }
 
 function shuffle<T>(array: Array<T>): void {
     let currentIndex = array.length;
     while (currentIndex != 0) {
-        let randomIndex = Math.floor(Math.random() * currentIndex);
+        const randomIndex = Math.floor(Math.random() * currentIndex);
         currentIndex--;
         [array[currentIndex], array[randomIndex]] = [array[randomIndex]!, array[currentIndex]!];
     }

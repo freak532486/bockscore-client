@@ -13,13 +13,12 @@ export function setupThumbnail(
     img: HTMLImageElement,
     caption: string,
     loadImage: () => Promise<Blob | undefined>,
-    viewer: ImageViewer
-)
-{
+    viewer: ImageViewer,
+) {
     img.src = EMPTY_IMAGE;
     img.classList.add("image-loading");
 
-    loadImage().then(blob => {
+    loadImage().then((blob) => {
         if (blob === undefined) {
             img.classList.remove("image-loading");
             img.src = PLACEHOLDER_IMAGE;
@@ -38,8 +37,8 @@ export function setupThumbnail(
         img.alt = caption;
         img.classList.add("has-image");
 
-        img.addEventListener("pointerdown", ev => ev.stopPropagation());
-        img.addEventListener("click", ev => {
+        img.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+        img.addEventListener("click", (ev) => {
             ev.stopPropagation();
             viewer.show(blob, caption);
         });

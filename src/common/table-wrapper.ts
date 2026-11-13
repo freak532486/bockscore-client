@@ -10,8 +10,7 @@ import type { App } from "./app";
  */
 export type ScoreMap = Map<string, Map<string, number>>;
 
-export class ScoreTableWrapper
-{
+export class ScoreTableWrapper {
     public readonly id: string;
     public readonly header: ScoreTableHeaderWrapper;
     private _rows: Array<ScoreTableRowWrapper>;
@@ -21,9 +20,8 @@ export class ScoreTableWrapper
         tableHeader: api.ScoreTableHeader,
         members: Array<api.MemberInfo>,
         scores: ScoreMap,
-        rows: Array<api.ScoreTableRow>
-    )
-    {
+        rows: Array<api.ScoreTableRow>,
+    ) {
         const userIdToMemberId = new Map<string, string>();
         for (const member of members) {
             if (member.user) {
@@ -41,26 +39,28 @@ export class ScoreTableWrapper
             userIdToMemberId,
         );
 
-        this._rows = rows.map(x => new ScoreTableRowWrapper(
-            app,
-            x.id,
-            this.header,
-            x.name,
-            scores.get(x.id) || new Map(),
-            x.joker == undefined ? null : members.find(y => y.id == x.joker!.id) || null,
-            x.hasImage !== false
-        ));
+        this._rows = rows.map(
+            (x) =>
+                new ScoreTableRowWrapper(
+                    app,
+                    x.id,
+                    this.header,
+                    x.name,
+                    scores.get(x.id) || new Map(),
+                    x.joker == undefined ? null : members.find((y) => y.id == x.joker!.id) || null,
+                    x.hasImage !== false,
+                ),
+        );
     }
 
     get rows() {
-        return  [...this._rows].sort((a, b) => a.name.localeCompare(b.name));
+        return [...this._rows].sort((a, b) => a.name.localeCompare(b.name));
     }
 
     /**
      * Adds a row to the table.
      */
-    async addRow(name: string): Promise<boolean>
-    {
+    async addRow(name: string): Promise<boolean> {
         const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
             this._rows.push(new ScoreTableRowWrapper(this.app, res, this.header, name, new Map(), null, false));
@@ -73,9 +73,8 @@ export class ScoreTableWrapper
     /**
      * Deletes this row from the table.
      */
-    async deleteRow(rowId: string): Promise<boolean>
-    {
-        const rowWrapper = this._rows.filter(x => x.id == rowId);
+    async deleteRow(rowId: string): Promise<boolean> {
+        const rowWrapper = this._rows.filter((x) => x.id == rowId);
         if (rowWrapper.length == 0) {
             return false;
         }
@@ -85,14 +84,13 @@ export class ScoreTableWrapper
             return false;
         }
 
-        this._rows = this._rows.filter(x => x.id !== rowId);
+        this._rows = this._rows.filter((x) => x.id !== rowId);
         return true;
     }
 
-    async setJoker(memberId: string, entryId: string): Promise<boolean>
-    {
+    async setJoker(memberId: string, entryId: string): Promise<boolean> {
         /* Check if member exists */
-        const member = this.header.members.find(x => x.id == memberId);
+        const member = this.header.members.find((x) => x.id == memberId);
         if (member == undefined) {
             return false;
         }
@@ -111,11 +109,9 @@ export class ScoreTableWrapper
 
         return success;
     }
-
 }
 
-export class ScoreTableHeaderWrapper
-{
+export class ScoreTableHeaderWrapper {
     constructor(
         private readonly app: App,
         private _name: string,
@@ -137,9 +133,11 @@ export class ScoreTableHeaderWrapper
         return this._scoreMode;
     }
 
-    async changeSettings(settings: api.TableSettings): Promise<boolean>
-    {
-        if ((settings.name == undefined || settings.name == this._name) && (settings.scoring == undefined || settings.scoring == this._scoreMode)) {
+    async changeSettings(settings: api.TableSettings): Promise<boolean> {
+        if (
+            (settings.name == undefined || settings.name == this._name) &&
+            (settings.scoring == undefined || settings.scoring == this._scoreMode)
+        ) {
             return false;
         }
 
@@ -154,8 +152,7 @@ export class ScoreTableHeaderWrapper
     }
 }
 
-export class ScoreTableRowWrapper
-{
+export class ScoreTableRowWrapper {
     constructor(
         private readonly app: App,
         public readonly id: string,
@@ -163,7 +160,7 @@ export class ScoreTableRowWrapper
         private _name: string,
         private readonly _data: Map<string, number>,
         private _jokerOf: api.MemberInfo | null,
-        private _hasImage: boolean
+        private _hasImage: boolean,
     ) {}
 
     get name() {
@@ -181,10 +178,9 @@ export class ScoreTableRowWrapper
     /**
      * Use ScoreTableWrapper::setJoker() instead, otherwise the table may have multiple rows with the same joker member.
      */
-    async setJoker(memberId: string): Promise<boolean>
-    {
+    async setJoker(memberId: string): Promise<boolean> {
         /* Check if member exists in header */
-        const member = this.header.members.find(x => x.id == memberId);
+        const member = this.header.members.find((x) => x.id == memberId);
         if (member == undefined) {
             return false;
         }
@@ -201,8 +197,7 @@ export class ScoreTableRowWrapper
     /**
      * Not synced with API. Use ScoreTableWrapper::setJoker() and be happy.
      */
-    clearJoker(): boolean
-    {
+    clearJoker(): boolean {
         this._jokerOf = null;
         return true;
     }
@@ -223,34 +218,32 @@ export class ScoreTableRowWrapper
     /**
      * Returns the score given by the given user for this row.
      */
-    getScore(memberId: string): number | undefined
-    {
+    getScore(memberId: string): number | undefined {
         return this._data.get(memberId);
     }
 
-    getAvgScore(type: api.ScoringType): number | undefined
-    {
+    getAvgScore(type: api.ScoringType): number | undefined {
         const scores = [...this._data.values()];
         if (scores.length == 0) {
             return undefined;
         }
 
         switch (type) {
-            case "Average": return avg(scores);
-            case "Magic": return magicMean(scores);
+            case "Average":
+                return avg(scores);
+            case "Magic":
+                return magicMean(scores);
         }
     }
 
     /**
      * Sets the score for the currently active user.
      */
-    async setScore(value: number): Promise<boolean>
-    {
+    async setScore(value: number): Promise<boolean> {
         if (this.app.userId.value == null) {
             return false;
         }
 
-        
         const memberId = this.header.userToMemberId.get(this.app.userId.value);
         if (memberId == undefined) {
             return false;
@@ -266,7 +259,7 @@ export class ScoreTableRowWrapper
             this._data.set(memberId, value);
             return true;
         }
-        
+
         const res = await api.setScore(this.app, this.id, memberId, value);
 
         if (res == "ok") {
@@ -277,8 +270,7 @@ export class ScoreTableRowWrapper
         return false;
     }
 
-    async getImage(): Promise<Blob | undefined>
-    {
+    async getImage(): Promise<Blob | undefined> {
         return this._hasImage ? this.app.rankingAccess.getEntryImage(this.id) : undefined;
     }
 
@@ -309,8 +301,7 @@ export class ScoreTableRowWrapper
     }
 }
 
-function avg(arr: Array<number>)
-{
+function avg(arr: Array<number>) {
     return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 

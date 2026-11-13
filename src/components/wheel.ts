@@ -8,19 +8,9 @@ const CANVAS_HEIGHT = 1000;
 
 const WHEEL_COLOR_DISABLED = "#222222";
 
-const WHEEL_COLORS = [
-    "#bc2424",
-    "#003cff",
-    "#31e831",
-    "#FFDD00",
-]
+const WHEEL_COLORS = ["#bc2424", "#003cff", "#31e831", "#FFDD00"];
 
-const WHEEL_TEXT_COLORS = [
-    "#DDDDDD",
-    "#DDDDDD",
-    "#222222",
-    "#222222"
-];
+const WHEEL_TEXT_COLORS = ["#DDDDDD", "#DDDDDD", "#222222", "#222222"];
 
 const WHEEL_RADIUS = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) * 0.45;
 const WHEEL_MAX_ENTRY_LENGTH = 25;
@@ -30,15 +20,13 @@ const SPIN_TIME_SECONDS = 10;
 const WIN_EVENT_DELAY_SECONDS = 0.5;
 const NUM_SPINS = 20;
 
-interface Spin
-{
-    startTs: number,
-    sourceAngle: number,
-    targetAngle: number
+interface Spin {
+    startTs: number;
+    sourceAngle: number;
+    targetAngle: number;
 }
 
-export class WheelComponent implements Component
-{
+export class WheelComponent implements Component {
     public readonly view: HTMLElement;
     private readonly audioCtx = new AudioContext();
     private sndSpin: AudioBuffer | undefined;
@@ -75,13 +63,12 @@ export class WheelComponent implements Component
         const anim = (ts: number) => {
             this.wheelAnimation(ctx, ts);
             requestAnimationFrame(anim);
-        }
+        };
 
         anim(0);
     }
 
-    private async loadSpinSound()
-    {
+    private async loadSpinSound() {
         const res = await fetch("/sounds/spin.mp3");
         const arr = await res.arrayBuffer();
         this.sndSpin = await this.audioCtx.decodeAudioData(arr);
@@ -110,8 +97,8 @@ export class WheelComponent implements Component
         /* Apply idle spin if no spin is happening, otherwise actual spin */
         const oldActiveEntry = this.getActiveEntryIdx();
         if (this.spinData == undefined) {
-            const angleDeg = SPIN_SPEED_IDLE * elapsedMs / 1000;
-            const angleRad = 2 * Math.PI * angleDeg / 360;
+            const angleDeg = (SPIN_SPEED_IDLE * elapsedMs) / 1000;
+            const angleRad = (2 * Math.PI * angleDeg) / 360;
             this.rotation = (this.rotation + angleRad) % (2 * Math.PI);
         } else {
             this.rotation = getAnimAngle(this.spinData, ts);
@@ -130,8 +117,7 @@ export class WheelComponent implements Component
         this.drawFrame(ctx);
     }
 
-    public spin(onWin: (entry: string) => void)
-    {
+    public spin(onWin: (entry: string) => void) {
         void this.audioCtx.resume();
         this.stopTimeout();
 
@@ -139,17 +125,21 @@ export class WheelComponent implements Component
             return;
         }
 
-        const slicePerEntry = 2 * Math.PI / this.entries.length;
+        const slicePerEntry = (2 * Math.PI) / this.entries.length;
         const targetAngle = Math.random() * 2 * Math.PI;
-        const winningEntryIdx = (this.entries.length - 1) - Math.floor(normalizeAngle(targetAngle - Math.PI / 2) / slicePerEntry);
+        const winningEntryIdx =
+            this.entries.length - 1 - Math.floor(normalizeAngle(targetAngle - Math.PI / 2) / slicePerEntry);
         const winningEntry = this.entries[winningEntryIdx]!;
         this.spinData = {
             startTs: this.lastTs,
             sourceAngle: this.rotation,
-            targetAngle: targetAngle
+            targetAngle: targetAngle,
         };
 
-        this.timeoutHandle = setTimeout(() => onWin(winningEntry), (SPIN_TIME_SECONDS + WIN_EVENT_DELAY_SECONDS) * 1000);
+        this.timeoutHandle = setTimeout(
+            () => onWin(winningEntry),
+            (SPIN_TIME_SECONDS + WIN_EVENT_DELAY_SECONDS) * 1000,
+        );
     }
 
     public idle() {
@@ -168,7 +158,7 @@ export class WheelComponent implements Component
     }
 
     removeEntry(entry: string) {
-        const idx = this._entries.findIndex(x => x == entry);
+        const idx = this._entries.findIndex((x) => x == entry);
         if (idx == -1) {
             return;
         }
@@ -232,8 +222,7 @@ export class WheelComponent implements Component
         ctx.stroke();
     }
 
-    private getActiveEntryIdx(): number
-    {
+    private getActiveEntryIdx(): number {
         const slice = (2 * Math.PI) / this.entries.length;
         let angle = Math.PI / 2 - this.rotation;
         if (angle < 0) {
@@ -243,22 +232,16 @@ export class WheelComponent implements Component
     }
 }
 
-function calculateFontSize(
-    ctx: CanvasRenderingContext2D,
-    entries: string[],
-    radius: number
-): number {
+function calculateFontSize(ctx: CanvasRenderingContext2D, entries: string[], radius: number): number {
     if (entries.length === 0) {
         return 24;
     }
 
-    const longest = entries.reduce(
-        (a, b) => truncated(a).length >= truncated(b).length ? a : b
-    );
+    const longest = entries.reduce((a, b) => (truncated(a).length >= truncated(b).length ? a : b));
 
     const text = truncated(longest);
     const maxWidth = radius * 0.7;
-    const maxHeight = 0.6 * (2 * radius * Math.PI) / entries.length;
+    const maxHeight = (0.6 * (2 * radius * Math.PI)) / entries.length;
 
     let low = 8;
     let high = 128;
@@ -280,9 +263,7 @@ function calculateFontSize(
     return low;
 }
 
-
-function getAnimAngle(spin: Spin, ts: number): number
-{
+function getAnimAngle(spin: Spin, ts: number): number {
     const elapsed = ts - spin.startTs;
     if (elapsed > SPIN_TIME_SECONDS * 1000) {
         return spin.targetAngle;
@@ -306,10 +287,7 @@ function easeOut(t: number): number {
     return 1 - Math.pow(2, -10 * t) + Math.pow(2, -10);
 }
 
-
-
-function truncated(str: string)
-{
+function truncated(str: string) {
     if (str.length < WHEEL_MAX_ENTRY_LENGTH) {
         return str;
     }
@@ -325,8 +303,7 @@ function normalizeAngle(angle: number) {
     return ret;
 }
 
-function createLayer(): HTMLCanvasElement
-{
+function createLayer(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
@@ -336,8 +313,7 @@ function createLayer(): HTMLCanvasElement
 /**
  * Renders the drop shadow of the wheel. This never changes, so it is rendered only once.
  */
-function renderShadowImage(): HTMLCanvasElement
-{
+function renderShadowImage(): HTMLCanvasElement {
     const layer = createLayer();
     const ctx = layer.getContext("2d")!;
 
@@ -356,8 +332,7 @@ function renderShadowImage(): HTMLCanvasElement
 /**
  * Renders the unrotated wheel (slices and labels) into the given layer.
  */
-function renderWheelImage(layer: HTMLCanvasElement, entries: string[])
-{
+function renderWheelImage(layer: HTMLCanvasElement, entries: string[]) {
     const ctx = layer.getContext("2d")!;
     const cx = CANVAS_WIDTH / 2;
     const cy = CANVAS_HEIGHT / 2;

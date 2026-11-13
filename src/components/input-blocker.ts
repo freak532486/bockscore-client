@@ -1,14 +1,12 @@
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
-import template from "./input-blocker.html"
-import "./input-blocker.css"
+import template from "./input-blocker.html";
+import "./input-blocker.css";
 
-export class InputBlockerComponent implements Component
-{
+export class InputBlockerComponent implements Component {
     public readonly view: HTMLElement;
 
-    constructor()
-    {
+    constructor() {
         this.view = htmlToElement(template);
 
         this.view.addEventListener("pointerdown", () => {
@@ -18,8 +16,7 @@ export class InputBlockerComponent implements Component
 
     private blockCount = 0;
 
-    private update()
-    {
+    private update() {
         this.view.classList.toggle("active", this.blockCount > 0);
         this.view.classList.remove("show-feedback");
     }

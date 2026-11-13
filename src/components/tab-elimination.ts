@@ -9,8 +9,7 @@ import { TabEliminationCardComponent } from "./tab-elimination-card";
 import "./tab-elimination.css";
 import template from "./tab-elimination.html";
 
-export class EliminationTabComponent implements Component
-{
+export class EliminationTabComponent implements Component {
     public readonly view: HTMLElement;
     private readonly importDialog = new EliminationImportDialog();
     private readonly confirmDialog = new ConfirmDialog();
@@ -27,18 +26,17 @@ export class EliminationTabComponent implements Component
         this.render();
 
         const btnImport = this.view.querySelector("#btn-elimination-import") as HTMLButtonElement;
-        btnImport.onclick = () => this.importDialog.show(settings => app.elimination.importFromRanking(settings));
+        btnImport.onclick = () => this.importDialog.show((settings) => app.elimination.importFromRanking(settings));
     }
 
     /**
      * Updates the view in place. Rows are only created, removed or moved when necessary, so nothing flickers and
      * loaded images are kept.
      */
-    private render()
-    {
+    private render() {
         const items = this.app.elimination.items;
 
-        const ids = new Set(items.map(x => x.entry.entryId));
+        const ids = new Set(items.map((x) => x.entry.entryId));
         for (const [entryId, card] of this.cards) {
             if (!ids.has(entryId)) {
                 card.view.remove();
@@ -56,7 +54,8 @@ export class EliminationTabComponent implements Component
 
             card.update(entry, removed, removedBy);
 
-            const expectedPosition: Element | null = previous === null ? this.games.firstElementChild : previous.nextElementSibling;
+            const expectedPosition: Element | null =
+                previous === null ? this.games.firstElementChild : previous.nextElementSibling;
             if (expectedPosition !== card.view) {
                 this.games.insertBefore(card.view, expectedPosition);
             }
@@ -64,7 +63,7 @@ export class EliminationTabComponent implements Component
             previous = card.view;
         }
 
-        const remaining = items.filter(x => !x.removed).length;
+        const remaining = items.filter((x) => !x.removed).length;
         const spanRemaining = this.view.querySelector("#span-remaining") as HTMLElement;
         spanRemaining.classList.toggle("invisible", items.length == 0);
         spanRemaining.classList.toggle("text-danger", remaining > items.length / 2);
@@ -73,16 +72,22 @@ export class EliminationTabComponent implements Component
         (this.view.querySelector("#num-total") as HTMLElement).textContent = String(items.length);
     }
 
-    private createCard(entry: api.EliminationEntry): TabEliminationCardComponent
-    {
-        const loadImage = entry.hasImage ?
-            () => this.app.rankingAccess.getEntryImage(entry.entryId) :
-            () => Promise.resolve(undefined);
+    private createCard(entry: api.EliminationEntry): TabEliminationCardComponent {
+        const loadImage = entry.hasImage
+            ? () => this.app.rankingAccess.getEntryImage(entry.entryId)
+            : () => Promise.resolve(undefined);
 
-        const card: TabEliminationCardComponent = new TabEliminationCardComponent(entry, loadImage, this.app.imageViewer, () => {
-            const current = card.entry;
-            this.confirmDialog.show(`Do you want to eliminate '${current.name}'?`, () => this.app.elimination.eliminate(current));
-        });
+        const card: TabEliminationCardComponent = new TabEliminationCardComponent(
+            entry,
+            loadImage,
+            this.app.imageViewer,
+            () => {
+                const current = card.entry;
+                this.confirmDialog.show(`Do you want to eliminate '${current.name}'?`, () =>
+                    this.app.elimination.eliminate(current),
+                );
+            },
+        );
 
         return card;
     }

@@ -1,26 +1,23 @@
 import type { App } from "./app";
 import { getCookie } from "./utils";
 
-export interface LoginRequest
-{
-    name: string,
-    password: string
+export interface LoginRequest {
+    name: string;
+    password: string;
 }
 
-export interface LoginResponse
-{
-    userId: string,
-    accessToken?: string
+export interface LoginResponse {
+    userId: string;
+    accessToken?: string;
 }
 
 /**
  * Performs a login. Writes the access token into the state.
  */
-export async function login(app: App, request: LoginRequest): Promise<"ok" | "bad_credentials" | "error">
-{
+export async function login(app: App, request: LoginRequest): Promise<"ok" | "bad_credentials" | "error"> {
     const response = await basicFetch(app, "/api/auth/login", {
         method: "POST",
-        body: JSON.stringify(request)
+        body: JSON.stringify(request),
     });
 
     if (response.status == 401) {
@@ -31,15 +28,14 @@ export async function login(app: App, request: LoginRequest): Promise<"ok" | "ba
         return "error";
     }
 
-    return applyLoginResponse(app, await response.json() as LoginResponse);
+    return applyLoginResponse(app, (await response.json()) as LoginResponse);
 }
 
 /**
  * Stores the access token and user id. The token is set first, so loads triggered by the user id change are already
  * authenticated.
  */
-function applyLoginResponse(app: App, login: LoginResponse): "ok" | "error"
-{
+function applyLoginResponse(app: App, login: LoginResponse): "ok" | "error" {
     if (login.accessToken == undefined) {
         return "error";
     }
@@ -50,18 +46,16 @@ function applyLoginResponse(app: App, login: LoginResponse): "ok" | "error"
     return "ok";
 }
 
-export interface RegisterRequest
-{
-    name: string,
-    email: string
-    password: string
+export interface RegisterRequest {
+    name: string;
+    email: string;
+    password: string;
 }
 
-export async function register(app: App, request: RegisterRequest): Promise<"ok" | "user_exists" | "error">
-{
+export async function register(app: App, request: RegisterRequest): Promise<"ok" | "user_exists" | "error"> {
     const response = await basicFetch(app, "/api/auth/register", {
         method: "POST",
-        body: JSON.stringify(request)
+        body: JSON.stringify(request),
     });
 
     if (response.status == 409) {
@@ -76,23 +70,22 @@ export async function register(app: App, request: RegisterRequest): Promise<"ok"
 }
 
 interface LogoutResponse {
-    newTempUserId: string
+    newTempUserId: string;
 }
 
 /**
  * Performs a logout. This will remove the auth token from the state.
  */
-export async function logout(app: App): Promise<"ok" | "error">
-{
+export async function logout(app: App): Promise<"ok" | "error"> {
     const response = await basicFetch(app, "/api/auth/logout", {
-        method: "POST"
+        method: "POST",
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    const logout = await response.json() as LogoutResponse;
+    const logout = (await response.json()) as LogoutResponse;
     app.authToken.value = null;
     app.userId.value = logout.newTempUserId;
     app.username.value = null;
@@ -105,35 +98,38 @@ export async function logout(app: App): Promise<"ok" | "error">
  * Performs a sign in. This either generates a new access token from the refresh token cookie, or assigns a randomly
  * generated temporary user id without an access token.
  */
-export async function signin(app: App): Promise<"ok" | "error">
-{
+export async function signin(app: App): Promise<"ok" | "error"> {
     const response = await basicFetch(app, "/api/auth/signin", {
-        method: "POST"
+        method: "POST",
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    return applyLoginResponse(app, await response.json() as LoginResponse);
+    return applyLoginResponse(app, (await response.json()) as LoginResponse);
 }
 
 /**
  * The server answers a wrong password with 401, so this request must not be retried with a refreshed token. Instead,
  * an expired token is refreshed beforehand.
  */
-export async function deleteUser(app: App, password: string): Promise<"ok" | "bad_password" | "error">
-{
-    if (isTokenExpired(app.authToken.value) && await sharedSignin(app) == "error") {
+export async function deleteUser(app: App, password: string): Promise<"ok" | "bad_password" | "error"> {
+    if (isTokenExpired(app.authToken.value) && (await sharedSignin(app)) == "error") {
         return "error";
     }
 
-    const response = await authFetch(app, "/api/user/delete", {
-        method: "POST",
-        body: JSON.stringify({
-            "password": password
-        })
-    }, false);
+    const response = await authFetch(
+        app,
+        "/api/user/delete",
+        {
+            method: "POST",
+            body: JSON.stringify({
+                password: password,
+            }),
+        },
+        false,
+    );
 
     if (response.status == 401) {
         return "bad_password";
@@ -142,34 +138,30 @@ export async function deleteUser(app: App, password: string): Promise<"ok" | "ba
     return response.ok ? "ok" : "error";
 }
 
-export interface RankingResponse
-{
-    id: string,
-    name: string,
-
+export interface RankingResponse {
+    id: string;
+    name: string;
 }
 
-export async function fetchAllRankings(app: App): Promise<Array<RankingResponse> | "error">
-{
+export async function fetchAllRankings(app: App): Promise<Array<RankingResponse> | "error"> {
     const response = await authFetch(app, "/api/ranking", {
-        method: "GET"
+        method: "GET",
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    return await response.json() as Array<RankingResponse>
+    return (await response.json()) as Array<RankingResponse>;
 }
 
 /**
  * Creates a new ranking. Returns the ranking id, or error.
  */
-export async function addRanking(app: App, name: string): Promise<string | "error">
-{
+export async function addRanking(app: App, name: string): Promise<string | "error"> {
     const response = await authFetch(app, "/api/ranking", {
         method: "POST",
-        body: JSON.stringify({ "name": name })
+        body: JSON.stringify({ name: name }),
     });
 
     if (!response.ok) {
@@ -182,11 +174,9 @@ export async function addRanking(app: App, name: string): Promise<string | "erro
 /**
  * Deletes the given ranking.
  */
-export async function deleteRanking(app: App, rankingId: string): Promise<"ok" | "error">
-{
-    const response = await authFetch(app,
-        "/api/ranking/" + rankingId, {
-        method: "DELETE"
+export async function deleteRanking(app: App, rankingId: string): Promise<"ok" | "error"> {
+    const response = await authFetch(app, "/api/ranking/" + rankingId, {
+        method: "DELETE",
     });
 
     return response.ok ? "ok" : "error";
@@ -195,12 +185,10 @@ export async function deleteRanking(app: App, rankingId: string): Promise<"ok" |
 /**
  * Renames the given ranking.
  */
-export async function renameRanking(app: App, rankingId: string, name: string): Promise<"ok" | "error">
-{
-    const response = await authFetch(app,
-        "/api/ranking/" + rankingId, {
+export async function renameRanking(app: App, rankingId: string, name: string): Promise<"ok" | "error"> {
+    const response = await authFetch(app, "/api/ranking/" + rankingId, {
         method: "PUT",
-        body: JSON.stringify({ "name": name })
+        body: JSON.stringify({ name: name }),
     });
 
     return response.ok ? "ok" : "error";
@@ -209,10 +197,9 @@ export async function renameRanking(app: App, rankingId: string, name: string): 
 /**
  * Retrieves an CSRF cookie from the server.
  */
-export async function updateXsrfToken(app: App): Promise<"ok" | "error">
-{
+export async function updateXsrfToken(app: App): Promise<"ok" | "error"> {
     await basicFetch(app, "/api/auth/xsrf-token", {
-        method: "GET"
+        method: "GET",
     });
 
     const csrfCookie = getCookie("bockscore.x-csrf-token");
@@ -224,95 +211,88 @@ export async function updateXsrfToken(app: App): Promise<"ok" | "error">
     return "ok";
 }
 
-interface UserInfo
-{
-    id: string,
-    name: string,
+interface UserInfo {
+    id: string;
+    name: string;
     account?: {
-        email: string | null,
-        emailVerified: boolean
-    },
-    role: string,
-    expiresAt?: string
+        email: string | null;
+        emailVerified: boolean;
+    };
+    role: string;
+    expiresAt?: string;
 }
 
-async function updateUserInfo(app: App): Promise<"ok" | "error">
-{
+async function updateUserInfo(app: App): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/user", {
-        method: "GET"
+        method: "GET",
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    const user = await response.json() as UserInfo;
+    const user = (await response.json()) as UserInfo;
     app.username.value = user.name;
     return "ok";
 }
 
 export type ScoringType = "Average" | "Magic";
 
-export interface ScoreTableHeader
-{
-    "id": string,
-    "name": string,
-    "scoring": ScoringType
+export interface ScoreTableHeader {
+    id: string;
+    name: string;
+    scoring: ScoringType;
 }
 
 /**
  * Fetches the headers of all tables for a given ranking.
  */
-export async function fetchTablesForRanking(app: App, rankingId: string): Promise<Array<ScoreTableHeader> | "error">
-{
+export async function fetchTablesForRanking(app: App, rankingId: string): Promise<Array<ScoreTableHeader> | "error"> {
     const response = await authFetch(app, "/api/scoreTable?rankingId=" + rankingId, {
-        method: "GET"
+        method: "GET",
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    return await response.json() as Array<ScoreTableHeader>;
+    return (await response.json()) as Array<ScoreTableHeader>;
 }
 
 /**
  * Creates a table for a ranking and returns its id. Returns error on error.
  */
-export async function createTable(app: App, rankingId: string, name: string): Promise<ScoreTableHeader | "error">
-{
+export async function createTable(app: App, rankingId: string, name: string): Promise<ScoreTableHeader | "error"> {
     const defaultScoringType: ScoringType = "Magic";
 
     const response = await authFetch(app, "/api/scoreTable", {
         method: "POST",
         body: JSON.stringify({
-            "name": name,
-            "rankingId": rankingId,
-            "scoring": defaultScoringType
-        })
+            name: name,
+            rankingId: rankingId,
+            scoring: defaultScoringType,
+        }),
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    const table = await response.json() as Partial<ScoreTableHeader> & { id: string };
-    return { "id": table.id, "name": table.name ?? name, "scoring": table.scoring ?? defaultScoringType };
+    const table = (await response.json()) as Partial<ScoreTableHeader> & { id: string };
+    return { id: table.id, name: table.name ?? name, scoring: table.scoring ?? defaultScoringType };
 }
 
-export interface TableSettings
-{
-    name: string | undefined,
-    scoring: ScoringType | undefined
+export interface TableSettings {
+    name: string | undefined;
+    scoring: ScoringType | undefined;
 }
 
 /**
  * Deletes the given table with all its entries.
  */
-export async function deleteTable(app: App, tableId: string): Promise<"ok" | "error">
-{
+export async function deleteTable(app: App, tableId: string): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/scoreTable/" + tableId, {
-        method: "DELETE"
+        method: "DELETE",
     });
 
     return response.ok ? "ok" : "error";
@@ -321,32 +301,29 @@ export async function deleteTable(app: App, tableId: string): Promise<"ok" | "er
 /**
  * Changes basic table settings.
  */
-export async function updateTableSettings(app: App, tableId: string, settings: TableSettings): Promise<"ok" | "error">
-{
+export async function updateTableSettings(app: App, tableId: string, settings: TableSettings): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/scoreTable/" + tableId, {
         method: "PUT",
         body: JSON.stringify({
-            "name": settings.name,
-            "scoring": settings.scoring
-        })
+            name: settings.name,
+            scoring: settings.scoring,
+        }),
     });
 
     return response.ok ? "ok" : "error";
 }
 
-export interface MemberInfo
-{
-    "id": string,
-    "name": string,
-    "isGuest": boolean,
-    "user"?: UserInfo
+export interface MemberInfo {
+    id: string;
+    name: string;
+    isGuest: boolean;
+    user?: UserInfo;
 }
 
 /**
  * Fetches all members of a ranking.
  */
-export async function fetchMembersForRanking(app: App, rankingId: string): Promise<Array<MemberInfo> | "error">
-{
+export async function fetchMembersForRanking(app: App, rankingId: string): Promise<Array<MemberInfo> | "error"> {
     const response = await authFetch(app, "/api/member?rankingId=" + rankingId, {
         method: "GET",
     });
@@ -355,109 +332,111 @@ export async function fetchMembersForRanking(app: App, rankingId: string): Promi
         return "error";
     }
 
-    return await response.json() as Array<MemberInfo>;
+    return (await response.json()) as Array<MemberInfo>;
 }
 
-export async function inviteMember(app: App, rankingId: string, name: string): Promise<MemberInfo | "user_not_found" | "error">
-{
+export async function inviteMember(
+    app: App,
+    rankingId: string,
+    name: string,
+): Promise<MemberInfo | "user_not_found" | "error"> {
     const response = await authFetch(app, "/api/member/" + rankingId + "/invite", {
         method: "POST",
-        body: JSON.stringify({ "name": name })
+        body: JSON.stringify({ name: name }),
     });
 
     if (response.status == 404) {
-        return "user_not_found"
+        return "user_not_found";
     }
 
     if (!response.ok) {
         return "error";
     }
 
-    return await response.json() as MemberInfo;
+    return (await response.json()) as MemberInfo;
 }
 
-export interface ScoreTableRow
-{
-    "id": string,
-    "name": string,
-    "hasImage"?: boolean,
-    "scoreTable"?: {
-        "id": string
-    },
-    "joker"?: {
-        "id": string,
-        "name": string
-    }
+export interface ScoreTableRow {
+    id: string;
+    name: string;
+    hasImage?: boolean;
+    scoreTable?: {
+        id: string;
+    };
+    joker?: {
+        id: string;
+        name: string;
+    };
 }
 
 /**
  * Fetches the rows of all given tables in a single request.
  */
-export async function fetchScoreTableRowsForTables(app: App, tableIds: Array<string>): Promise<Array<ScoreTableRow> | "error">
-{
+export async function fetchScoreTableRowsForTables(
+    app: App,
+    tableIds: Array<string>,
+): Promise<Array<ScoreTableRow> | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry/findMultiple", {
         method: "POST",
-        body: JSON.stringify({ "tableIds": tableIds })
+        body: JSON.stringify({ tableIds: tableIds }),
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    return await response.json() as Array<ScoreTableRow>;
+    return (await response.json()) as Array<ScoreTableRow>;
 }
 
-export interface UserScore
-{
-    "memberId": string,
-    "entryId": string,
-    "value": number | undefined
+export interface UserScore {
+    memberId: string;
+    entryId: string;
+    value: number | undefined;
 }
 
-export async function fetchUserScores(app: App, memberIds: Array<string>): Promise<Array<UserScore> | "error">
-{
+export async function fetchUserScores(app: App, memberIds: Array<string>): Promise<Array<UserScore> | "error"> {
     const request = {
-        "memberIds": memberIds
+        memberIds: memberIds,
     };
 
     const response = await authFetch(app, "/api/userscore/findMultiple", {
         method: "POST",
-        "body": JSON.stringify(request)
+        body: JSON.stringify(request),
     });
 
     if (!response.ok) {
         return "error";
     }
 
-    return await response.json() as Array<UserScore>;
+    return (await response.json()) as Array<UserScore>;
 }
 
-export async function createScore(app: App, entryId: string, memberId: string, value: number): Promise<string | "error">
-{
-    const response = await authFetch(app,
-        `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
+export async function createScore(
+    app: App,
+    entryId: string,
+    memberId: string,
+    value: number,
+): Promise<string | "error"> {
+    const response = await authFetch(app, `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
         method: "POST",
-        "body": JSON.stringify({
-            "value": value
-        })
+        body: JSON.stringify({
+            value: value,
+        }),
     });
 
     if (!response.ok) {
         return "error";
     }
-
 
     return (await response.json()).id as string;
 }
 
-export async function setScore(app: App, entryId: string, memberId: string, value: number): Promise<"ok" | "error">
-{
-    const response = await authFetch(app,
-        `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
+export async function setScore(app: App, entryId: string, memberId: string, value: number): Promise<"ok" | "error"> {
+    const response = await authFetch(app, `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
         method: "PUT",
-        "body": JSON.stringify({
-            "value": value
-        })
+        body: JSON.stringify({
+            value: value,
+        }),
     });
 
     return response.ok ? "ok" : "error";
@@ -466,11 +445,10 @@ export async function setScore(app: App, entryId: string, memberId: string, valu
 /**
  * Either returns the UUID of the created row, or an error.
  */
-export async function addRow(app: App, tableId: string, name: string): Promise<string | "error">
-{
+export async function addRow(app: App, tableId: string, name: string): Promise<string | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry", {
         method: "POST",
-        "body": JSON.stringify({ "scoreTableId": tableId, "name": name })
+        body: JSON.stringify({ scoreTableId: tableId, name: name }),
     });
 
     if (!response.ok) {
@@ -480,8 +458,7 @@ export async function addRow(app: App, tableId: string, name: string): Promise<s
     return (await response.json()).id as string;
 }
 
-export async function deleteRow(app: App, entryId: string): Promise<"ok" | "error">
-{
+export async function deleteRow(app: App, entryId: string): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
         method: "DELETE",
     });
@@ -489,21 +466,19 @@ export async function deleteRow(app: App, entryId: string): Promise<"ok" | "erro
     return response.ok ? "ok" : "error";
 }
 
-export async function renameRow(app: App, entryId: string, newName: string): Promise<"ok" | "error">
-{
+export async function renameRow(app: App, entryId: string, newName: string): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
         method: "PUT",
-        "body": JSON.stringify({ "name": newName })
+        body: JSON.stringify({ name: newName }),
     });
 
     return response.ok ? "ok" : "error";
 }
 
-export async function setEntryJokerMember(app: App, entryId: string, memberId: string): Promise<"ok" | "error">
-{
+export async function setEntryJokerMember(app: App, entryId: string, memberId: string): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry/" + entryId, {
         method: "PUT",
-        "body": JSON.stringify({ "jokerMemberId": memberId })
+        body: JSON.stringify({ jokerMemberId: memberId }),
     });
 
     return response.ok ? "ok" : "error";
@@ -512,10 +487,9 @@ export async function setEntryJokerMember(app: App, entryId: string, memberId: s
 /**
  * Returns the saved image for the given entry.
  */
-export async function getEntryImage(app: App, entryId: string): Promise<Blob | "not_found" | "error">
-{
+export async function getEntryImage(app: App, entryId: string): Promise<Blob | "not_found" | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry/" + entryId + "/image", {
-        method: "GET"
+        method: "GET",
     });
 
     if (response.status == 404) {
@@ -528,24 +502,19 @@ export async function getEntryImage(app: App, entryId: string): Promise<Blob | "
     }
 
     const bytes = new Uint8Array(await response.arrayBuffer());
-    return new Blob([bytes], { "type": contentType });
+    return new Blob([bytes], { type: contentType });
 }
 
 /**
  * Updates the entry image for the given entry.
  */
-export async function setEntryImage(
-    app: App,
-    entryId: string,
-    image: Blob
-): Promise<"ok" | "error">
-{
+export async function setEntryImage(app: App, entryId: string, image: Blob): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry/" + entryId + "/image", {
         method: "PUT",
         headers: {
-            "Content-Type": image.type
+            "Content-Type": image.type,
         },
-        body: image
+        body: image,
     });
 
     return response.ok ? "ok" : "error";
@@ -554,80 +523,55 @@ export async function setEntryImage(
 /**
  * Removes the entry image of the given entry.
  */
-export async function deleteEntryImage(app: App, entryId: string): Promise<"ok" | "error">
-{
+export async function deleteEntryImage(app: App, entryId: string): Promise<"ok" | "error"> {
     const response = await authFetch(app, "/api/scoreTableEntry/" + entryId + "/image", {
-        method: "DELETE"
+        method: "DELETE",
     });
 
     return response.ok ? "ok" : "error";
 }
 
-export interface EliminationEntry
-{
-    entryId: string,
-    name: string,
-    hasImage: boolean,
-    isJoker: boolean,
-    jokerName?: string,
-    markedOff: boolean,
-    score: number
+export interface EliminationEntry {
+    entryId: string;
+    name: string;
+    hasImage: boolean;
+    isJoker: boolean;
+    jokerName?: string;
+    markedOff: boolean;
+    score: number;
 }
 
-export async function getEliminationTable
-(
-    app: App,
-    rankingId: string
-): Promise<Array<EliminationEntry> | "error">
-{
-    const res = await authFetch(
-        app,
-        "/api/ranking/" + rankingId + "/elimination",
-        {
-            method: "GET"
-        }
-    );
+export async function getEliminationTable(app: App, rankingId: string): Promise<Array<EliminationEntry> | "error"> {
+    const res = await authFetch(app, "/api/ranking/" + rankingId + "/elimination", {
+        method: "GET",
+    });
 
     if (!res.ok) {
         return "error";
     }
 
-    return await res.json() as Array<EliminationEntry>
+    return (await res.json()) as Array<EliminationEntry>;
 }
 
 export async function updateEliminationTable(
     app: App,
     rankingId: string,
-    entryIds: Array<string>
-): Promise<"ok" | "error">
-{
-    const res = await authFetch(
-        app,
-        "/api/ranking/" + rankingId + "/elimination",
-        {
-            method: "PUT",
-            body: JSON.stringify({
-                ids: entryIds
-            })
-        }
-    );
+    entryIds: Array<string>,
+): Promise<"ok" | "error"> {
+    const res = await authFetch(app, "/api/ranking/" + rankingId + "/elimination", {
+        method: "PUT",
+        body: JSON.stringify({
+            ids: entryIds,
+        }),
+    });
 
     return res.ok ? "ok" : "error";
 }
 
-export async function markOffEliminationEntry(
-    app: App,
-    rankingId: string,
-    entryId: string
-): Promise<"ok" | "error">
-{
-    const res = await authFetch(
-        app,
-        "/api/ranking/" + rankingId + "/elimination/" + entryId,
-        {
-            method: "POST"
-        }
-    );
+export async function markOffEliminationEntry(app: App, rankingId: string, entryId: string): Promise<"ok" | "error"> {
+    const res = await authFetch(app, "/api/ranking/" + rankingId + "/elimination/" + entryId, {
+        method: "POST",
+    });
 
     return res.ok ? "ok" : "error";
 }
@@ -640,17 +584,15 @@ let pendingSignin: Promise<"ok" | "error"> | null = null;
  * The server rotates the refresh token on every refresh and rejects the old one, so concurrent refreshes must share
  * a single sign-in request.
  */
-function sharedSignin(app: App): Promise<"ok" | "error">
-{
+function sharedSignin(app: App): Promise<"ok" | "error"> {
     if (pendingSignin == null) {
-        pendingSignin = signin(app).finally(() => pendingSignin = null);
+        pendingSignin = signin(app).finally(() => (pendingSignin = null));
     }
 
     return pendingSignin;
 }
 
-function isTokenExpired(token: string | null): boolean
-{
+function isTokenExpired(token: string | null): boolean {
     if (token == null) {
         return true;
     }
@@ -668,9 +610,8 @@ async function authFetch(
     app: App,
     resource: string,
     options: RequestInit,
-    refreshOnUnauthorized: boolean = true
-): Promise<Response>
-{
+    refreshOnUnauthorized: boolean = true,
+): Promise<Response> {
     const fetchWithToken = (token: string | null) => {
         const headers = new Headers(options.headers);
         if (token) {
@@ -686,15 +627,14 @@ async function authFetch(
         return res1;
     }
 
-    if (app.authToken.value === usedToken && await sharedSignin(app) == "error") {
+    if (app.authToken.value === usedToken && (await sharedSignin(app)) == "error") {
         return res1;
     }
 
     return fetchWithToken(app.authToken.value);
 }
 
-async function basicFetch(app: App, resource: string, options: RequestInit)
-{
+async function basicFetch(app: App, resource: string, options: RequestInit) {
     /* Add basic headers */
     const headers = new Headers(options.headers);
 
@@ -707,6 +647,6 @@ async function basicFetch(app: App, resource: string, options: RequestInit)
     /* Do the fetch */
     return fetch(resource, {
         ...options,
-        headers
+        headers,
     });
 }

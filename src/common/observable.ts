@@ -1,7 +1,7 @@
 export type ChangeListener<T> = (value: T, previous: T) => void;
 
 /**
- * An observable type. Can be get and set just like the normal type, but you can attach listeners that notify you of 
+ * An observable type. Can be get and set just like the normal type, but you can attach listeners that notify you of
  * any state changes.
  */
 export class Observable<T> {

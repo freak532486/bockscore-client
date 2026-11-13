@@ -5,8 +5,7 @@ import template from "./message-box.message.html";
 const SECONDS_TO_FADE = 20;
 const SECONDS_TO_DELETE = 30;
 
-export class MessageBoxMessage implements Component
-{
+export class MessageBoxMessage implements Component {
     public readonly view: HTMLElement;
     private firstTs?: number;
 
@@ -15,7 +14,7 @@ export class MessageBoxMessage implements Component
         this.view.textContent = msg;
 
         /* Hide immediately on click */
-        this.view.onclick = _ => this.view.remove();
+        this.view.onclick = () => this.view.remove();
 
         /* Play animation to fade and eventually remove message */
         const anim = (ts: number) => {
@@ -39,7 +38,7 @@ export class MessageBoxMessage implements Component
             const k = (elapsedSecs - SECONDS_TO_FADE) / (SECONDS_TO_DELETE - SECONDS_TO_FADE);
             this.view.style.opacity = String(1 - k);
             requestAnimationFrame(anim);
-        }
+        };
 
         requestAnimationFrame(anim);
     }

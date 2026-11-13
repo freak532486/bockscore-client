@@ -14,8 +14,7 @@ import templateTableSettingsDialog from "./tab-rankings.table-settings-dialog.ht
 
 const REFRESH_AFTER_HIDDEN_MS = 60_000;
 
-export class RankingsTabComponent implements Component
-{
+export class RankingsTabComponent implements Component {
     public readonly view: HTMLElement;
     private readonly confirmDialog = new ConfirmDialog();
     private readonly updateLock = new Mutex();
@@ -31,7 +30,7 @@ export class RankingsTabComponent implements Component
 
         app.selectedRankingId.subscribe(() => this.updateTables());
         app.userId.subscribe(() => this.updateTables());
-        app.rankingAccess.addEventListener(RankingAccess.EVENT_TABLES_CHANGED, ev => {
+        app.rankingAccess.addEventListener(RankingAccess.EVENT_TABLES_CHANGED, (ev) => {
             if ((ev as CustomEvent).detail === this.app.selectedRankingId.value) {
                 this.updateTables();
             }
@@ -54,7 +53,7 @@ export class RankingsTabComponent implements Component
             const name = inputTableName.value.trim();
             addTableDialog.modal.hide();
             await this.addTable(name);
-        }
+        };
 
         /* Setup table settings dialog */
         const tableSettingsDialogView = htmlToElement(templateTableSettingsDialog);
@@ -73,7 +72,7 @@ export class RankingsTabComponent implements Component
             tableNameInput.value = table.header.name;
             tableScoringSelect.value = table.header.scoreMode;
             tableSettingsDialog.show();
-        }
+        };
 
         const submitButton = tableSettingsDialogView.querySelector("#btn-table-settings-update") as HTMLButtonElement;
         submitButton.onclick = async () => {
@@ -91,8 +90,8 @@ export class RankingsTabComponent implements Component
             }
 
             const success = await table.header.changeSettings({
-                "name": nameChanged ? name : undefined,
-                "scoring": scoringChanged ? scoring : undefined
+                name: nameChanged ? name : undefined,
+                scoring: scoringChanged ? scoring : undefined,
             });
 
             if (!success) {
@@ -102,22 +101,26 @@ export class RankingsTabComponent implements Component
 
             this.renderedTable = null;
             this.updateTables();
-        }
+        };
 
         /* The confirmation is shown once the settings dialog is hidden, since Bootstrap cannot show two modals at once */
         const btnDeleteTable = tableSettingsDialogView.querySelector("#btn-delete-table") as HTMLButtonElement;
         btnDeleteTable.onclick = () => {
-            tableSettingsDialogView.addEventListener("hidden.bs.modal", async () => {
-                const table = await this.getActiveTable();
-                if (table == undefined) {
-                    return;
-                }
+            tableSettingsDialogView.addEventListener(
+                "hidden.bs.modal",
+                async () => {
+                    const table = await this.getActiveTable();
+                    if (table == undefined) {
+                        return;
+                    }
 
-                this.confirmDialog.show(
-                    `Do you want to delete the table '${table.header.name}' with all its entries?`,
-                    () => this.deleteTable(table.id)
-                );
-            }, { once: true });
+                    this.confirmDialog.show(
+                        `Do you want to delete the table '${table.header.name}' with all its entries?`,
+                        () => this.deleteTable(table.id),
+                    );
+                },
+                { once: true },
+            );
 
             tableSettingsDialog.hide();
         };
@@ -133,8 +136,7 @@ export class RankingsTabComponent implements Component
         this.renderTable();
     }
 
-    private async onVisibilityChange()
-    {
+    private async onVisibilityChange() {
         if (document.visibilityState === "hidden") {
             this.hiddenSince = Date.now();
             return;
@@ -152,8 +154,7 @@ export class RankingsTabComponent implements Component
         await this.updateTables();
     }
 
-    private async deleteTable(tableId: string)
-    {
+    private async deleteTable(tableId: string) {
         const rankingId = this.app.selectedRankingId.value;
         if (rankingId == null) {
             return;
@@ -169,14 +170,15 @@ export class RankingsTabComponent implements Component
         await this.updateTables();
     }
 
-    private async addTable(name: string)
-    {
+    private async addTable(name: string) {
         const rankingId = this.app.selectedRankingId.value;
         if (name == "" || rankingId == null) {
             return;
         }
 
-        const res = await this.app.inputBlocker.runAsyncWithBlockedInput(() => api.createTable(this.app, rankingId, name));
+        const res = await this.app.inputBlocker.runAsyncWithBlockedInput(() =>
+            api.createTable(this.app, rankingId, name),
+        );
         if (res == "error") {
             this.app.errorDialog.showError("An error occured while creating the table.");
             return;
@@ -189,68 +191,69 @@ export class RankingsTabComponent implements Component
     /**
      * Rebuilds the table tabs. The new tabs replace the old ones at once, so the header never shows an empty state.
      */
-    private updateTables(preferredTableId?: string): Promise<void>
-    {
-        return this.updateLock.withLock(() => this.app.inputBlocker.runAsyncWithBlockedInput(async () => {
-            const header = this.view.querySelector("#tab-rankings-header") as HTMLElement;
-            const btnTableSettings = this.view.querySelector("#btn-table-settings") as HTMLElement;
-            const ul = this.view.querySelector("ul") as HTMLElement;
+    private updateTables(preferredTableId?: string): Promise<void> {
+        return this.updateLock.withLock(() =>
+            this.app.inputBlocker.runAsyncWithBlockedInput(async () => {
+                const header = this.view.querySelector("#tab-rankings-header") as HTMLElement;
+                const btnTableSettings = this.view.querySelector("#btn-table-settings") as HTMLElement;
+                const ul = this.view.querySelector("ul") as HTMLElement;
 
-            const rankingId = this.app.selectedRankingId.value;
-            if (rankingId == null) {
-                ul.replaceChildren(this.addTableItem);
-                header.classList.toggle("d-none", true);
-                this.app.selectedTableId.value = null;
-                return;
-            }
-
-            const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(rankingId);
-            const tables = await Promise.all(tableHeaders.map(x => this.app.rankingAccess.getTable(x.id)));
-            if (rankingId !== this.app.selectedRankingId.value) {
-                return;
-            }
-
-            const items: Array<HTMLElement> = [];
-            for (const table of tables) {
-                if (table == "error") {
-                    continue;
+                const rankingId = this.app.selectedRankingId.value;
+                if (rankingId == null) {
+                    ul.replaceChildren(this.addTableItem);
+                    header.classList.toggle("d-none", true);
+                    this.app.selectedTableId.value = null;
+                    return;
                 }
 
-                const li = document.createElement("li");
-                li.classList.add("nav-item");
-                const btn = document.createElement("button");
-                btn.classList.add("nav-link");
-                btn.dataset.tableId = table.id;
-                btn.textContent = table.header.name;
-                btn.onclick = () => this.app.selectedTableId.value = table.id;
-                li.appendChild(btn);
-                items.push(li);
-            }
+                const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(rankingId);
+                const tables = await Promise.all(tableHeaders.map((x) => this.app.rankingAccess.getTable(x.id)));
+                if (rankingId !== this.app.selectedRankingId.value) {
+                    return;
+                }
 
-            ul.replaceChildren(...items, this.addTableItem);
-            header.classList.toggle("d-none", false);
-            btnTableSettings.classList.toggle("d-none", tableHeaders.length == 0);
+                const items: Array<HTMLElement> = [];
+                for (const table of tables) {
+                    if (table == "error") {
+                        continue;
+                    }
 
-            if (tableHeaders.length == 0) {
-                this.app.selectedTableId.value = null;
-                return;
-            }
+                    const li = document.createElement("li");
+                    li.classList.add("nav-item");
+                    const btn = document.createElement("button");
+                    btn.classList.add("nav-link");
+                    btn.dataset.tableId = table.id;
+                    btn.textContent = table.header.name;
+                    btn.onclick = () => (this.app.selectedTableId.value = table.id);
+                    li.appendChild(btn);
+                    items.push(li);
+                }
 
-            const tableIds = tableHeaders.map(x => x.id);
-            const current = this.app.selectedTableId.value;
-            const target = [preferredTableId, current].find(x => x != undefined && tableIds.includes(x)) ?? tableIds[0]!;
+                ul.replaceChildren(...items, this.addTableItem);
+                header.classList.toggle("d-none", false);
+                btnTableSettings.classList.toggle("d-none", tableHeaders.length == 0);
 
-            if (target === current) {
-                this.highlightSelectedTable();
-                await this.renderTable();
-            } else {
-                this.app.selectedTableId.value = target;
-            }
-        }));
+                if (tableHeaders.length == 0) {
+                    this.app.selectedTableId.value = null;
+                    return;
+                }
+
+                const tableIds = tableHeaders.map((x) => x.id);
+                const current = this.app.selectedTableId.value;
+                const target =
+                    [preferredTableId, current].find((x) => x != undefined && tableIds.includes(x)) ?? tableIds[0]!;
+
+                if (target === current) {
+                    this.highlightSelectedTable();
+                    await this.renderTable();
+                } else {
+                    this.app.selectedTableId.value = target;
+                }
+            }),
+        );
     }
 
-    private highlightSelectedTable()
-    {
+    private highlightSelectedTable() {
         for (const btn of this.view.querySelectorAll<HTMLButtonElement>("ul button[data-table-id]")) {
             btn.classList.toggle("active", btn.dataset.tableId === this.app.selectedTableId.value);
         }
@@ -260,8 +263,7 @@ export class RankingsTabComponent implements Component
      * Shows the selected table. The view is only rebuilt if the table changed, which happens when another table is
      * selected or the cached ranking was reloaded.
      */
-    private renderTable(): Promise<void>
-    {
+    private renderTable(): Promise<void> {
         return this.app.inputBlocker.runAsyncWithBlockedInput(async () => {
             const tableView = this.view.querySelector("#table-view") as HTMLElement;
             const tableId = this.app.selectedTableId.value;
@@ -286,15 +288,15 @@ export class RankingsTabComponent implements Component
                 return;
             }
 
-            const expandedRowId = this.renderedTable?.id === table.id ? this.tableComponent?.expandedRowId ?? null : null;
+            const expandedRowId =
+                this.renderedTable?.id === table.id ? (this.tableComponent?.expandedRowId ?? null) : null;
             this.renderedTable = table;
             this.tableComponent = new MobileScoreTableComponent(this.app, table, this.confirmDialog, expandedRowId);
             tableView.replaceChildren(this.tableComponent.view);
         });
     }
 
-    private async getActiveTable(): Promise<ScoreTableWrapper | undefined>
-    {
+    private async getActiveTable(): Promise<ScoreTableWrapper | undefined> {
         if (this.app.selectedTableId.value == null) {
             return undefined;
         }

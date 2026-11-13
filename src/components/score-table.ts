@@ -9,8 +9,7 @@ import "./score-table.entry.css";
 import { ScoreTableEntryComponent } from "./score-table.entry";
 import template from "./score-table.html";
 
-export class MobileScoreTableComponent implements Component
-{
+export class MobileScoreTableComponent implements Component {
     public readonly view: HTMLElement;
     private readonly list: HTMLElement;
     private readonly entries = new Map<string, ScoreTableEntryComponent>();
@@ -20,9 +19,8 @@ export class MobileScoreTableComponent implements Component
         private readonly app: App,
         private readonly wrapper: ScoreTableWrapper,
         private readonly confirmDialog: ConfirmDialog,
-        expandedRowId: string | null = null
-    )
-    {
+        expandedRowId: string | null = null,
+    ) {
         this._expandedRowId = expandedRowId;
         this.view = htmlToElement(template);
         this.list = this.view.querySelector("#div-entries") as HTMLElement;
@@ -45,7 +43,7 @@ export class MobileScoreTableComponent implements Component
         }
 
         const entry = this._expandedRowId === null ? undefined : this.entries.get(this._expandedRowId);
-        const image = [...ev.clipboardData?.files ?? []].find(x => isSupportedImageType(x.type));
+        const image = [...(ev.clipboardData?.files ?? [])].find((x) => isSupportedImageType(x.type));
         if (entry === undefined || image === undefined) {
             return;
         }
@@ -54,8 +52,7 @@ export class MobileScoreTableComponent implements Component
         entry.uploadImage(image);
     };
 
-    get expandedRowId(): string | null
-    {
+    get expandedRowId(): string | null {
         return this._expandedRowId;
     }
 
@@ -64,7 +61,7 @@ export class MobileScoreTableComponent implements Component
      */
     public refresh() {
         const rows = this.wrapper.rows;
-        const ids = new Set(rows.map(x => x.id));
+        const ids = new Set(rows.map((x) => x.id));
 
         if (this._expandedRowId !== null && !ids.has(this._expandedRowId)) {
             this._expandedRowId = null;
@@ -87,7 +84,8 @@ export class MobileScoreTableComponent implements Component
 
             entry.update(row.id === this._expandedRowId);
 
-            const expectedPosition: Element | null = previous === null ? this.list.firstElementChild : previous.nextElementSibling;
+            const expectedPosition: Element | null =
+                previous === null ? this.list.firstElementChild : previous.nextElementSibling;
             if (expectedPosition !== entry.view) {
                 this.list.insertBefore(entry.view, expectedPosition);
             }
@@ -96,17 +94,15 @@ export class MobileScoreTableComponent implements Component
         }
     }
 
-    private createEntry(row: ScoreTableRowWrapper): ScoreTableEntryComponent
-    {
+    private createEntry(row: ScoreTableRowWrapper): ScoreTableEntryComponent {
         return new ScoreTableEntryComponent(this.app, this.wrapper, row, {
             toggle: () => this.toggle(row.id),
             changed: () => this.refresh(),
-            remove: () => this.confirmDialog.show(`Do you want to delete '${row.name}'?`, () => this.deleteRow(row.id))
+            remove: () => this.confirmDialog.show(`Do you want to delete '${row.name}'?`, () => this.deleteRow(row.id)),
         });
     }
 
-    private toggle(rowId: string)
-    {
+    private toggle(rowId: string) {
         this._expandedRowId = this._expandedRowId === rowId ? null : rowId;
         this.refresh();
 
@@ -115,16 +111,15 @@ export class MobileScoreTableComponent implements Component
         }
     }
 
-    private async addRow()
-    {
-        const existing = new Set(this.wrapper.rows.map(x => x.id));
+    private async addRow() {
+        const existing = new Set(this.wrapper.rows.map((x) => x.id));
         const success = await this.app.inputBlocker.runAsyncWithBlockedInput(() => this.wrapper.addRow("New Row"));
         if (!success) {
             this.app.errorDialog.showError("An error occured while adding the entry.");
             return;
         }
 
-        const added = this.wrapper.rows.find(x => !existing.has(x.id));
+        const added = this.wrapper.rows.find((x) => !existing.has(x.id));
         this._expandedRowId = added?.id ?? null;
         this.refresh();
 
@@ -135,8 +130,7 @@ export class MobileScoreTableComponent implements Component
         }
     }
 
-    private async deleteRow(rowId: string)
-    {
+    private async deleteRow(rowId: string) {
         const success = await this.app.inputBlocker.runAsyncWithBlockedInput(() => this.wrapper.deleteRow(rowId));
         if (!success) {
             this.app.errorDialog.showError("An error occured while deleting the entry.");

@@ -10,8 +10,7 @@ import { SSEHandler } from "./sse-handler";
 /**
  * The entire state of the app.
  */
-export class App
-{
+export class App {
     public userId = new Observable<string | null>(null);
     public username = new Observable<string | null>(null);
     public authToken = new Observable<string | null>(null);
@@ -29,4 +28,4 @@ export class App
     public imageViewer: ImageViewer = new ImageViewer();
 
     public elimination: EliminationState = new EliminationState(this);
-};
+}

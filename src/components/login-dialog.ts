@@ -1,13 +1,12 @@
-import template from "./login-dialog.html"
-import "./login-dialog.css"
-import type { Component } from "./component"
+import template from "./login-dialog.html";
+import "./login-dialog.css";
+import type { Component } from "./component";
 import { htmlToElement } from "../common/utils";
 import type { App } from "../common/app";
-import * as bootstrap from "bootstrap"
-import * as api from "../common/api"
+import * as bootstrap from "bootstrap";
+import * as api from "../common/api";
 
-export class LoginDialogComponent implements Component
-{
+export class LoginDialogComponent implements Component {
     public readonly view: HTMLElement;
     public readonly modal: bootstrap.Modal;
 
@@ -21,10 +20,10 @@ export class LoginDialogComponent implements Component
         const loginForm = this.view.querySelector("form") as HTMLFormElement;
         const errorDiv = this.view.querySelector(".alert") as HTMLDivElement;
 
-        loginForm.onsubmit = async ev => {
+        loginForm.onsubmit = async (ev) => {
             ev.preventDefault();
 
-            const res = await api.login(app, { "name": inputUsername.value, "password": inputPassword.value });
+            const res = await api.login(app, { name: inputUsername.value, password: inputPassword.value });
             if (res == "bad_credentials") {
                 errorDiv.classList.remove("d-none");
                 errorDiv.textContent = "Invalid username or password";
