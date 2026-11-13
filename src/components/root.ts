@@ -217,11 +217,12 @@ export class RootComponent implements Component
         registerDialog.primaryButton.onclick = async () => {
             if (inputPw.value !== inputPwConfirm.value) {
                 registerDialog.showError("Passwords do not match.");
+                return;
             }
 
             const req: api.RegisterRequest = {
-                "name": inputUser.value,
-                "email": inputEmail.value,
+                "name": inputUser.value.trim(),
+                "email": inputEmail.value.trim(),
                 "password": inputPw.value
             }
 
@@ -280,12 +281,24 @@ export class RootComponent implements Component
 
 function validateRegistrationRequest(req: api.RegisterRequest): string | null
 {
-    if (req.name.length >= 64) {
+    if (req.name.length == 0) {
+        return "Username is required.";
+    }
+
+    if (req.name.length > 64) {
         return "Username is too long.";
     }
 
+    if (req.email.length == 0) {
+        return "E-Mail address is required.";
+    }
+
     if (req.password.length < 8) {
-        return "Password is too short";
+        return "Password is too short.";
+    }
+
+    if (req.password.length > 48) {
+        return "Password is too long.";
     }
 
     return null;

@@ -42,6 +42,8 @@ export class TabEliminationCardComponent implements Component {
         row.getImage().then(img => {
             if (img !== undefined) {
                 const url = URL.createObjectURL(img);
+                domImg.onload = () => URL.revokeObjectURL(url);
+                domImg.onerror = () => URL.revokeObjectURL(url);
                 domImg.src = url;
             }
         });

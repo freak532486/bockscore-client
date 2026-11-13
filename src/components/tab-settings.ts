@@ -28,6 +28,8 @@ export class SettingsTab implements Component
         this.view.append(this.confirmDialog.view);
 
         const inputPassword = this.userDeleteConfirmDialog.addTextInput("input-pw", "Confirm password");
+        inputPassword.type = "password";
+        inputPassword.autocomplete = "current-password";
         this.userDeleteConfirmDialog.primaryButton.textContent = "Delete User";
         this.userDeleteConfirmDialog.primaryButton.classList.remove("btn-primary");
         this.userDeleteConfirmDialog.primaryButton.classList.add("btn-danger");
@@ -129,8 +131,16 @@ export class SettingsTab implements Component
                     /* Delete button */
                     const btnDelete = entry.querySelector(".btn-delete-ranking") as HTMLButtonElement;
                     btnDelete.onclick = () => {
-                        this.confirmDialog.show("Do you want to delete ranking '" + ranking.name + "'?", () => {
-                            this.app.rankingAccess.deleteRanking(ranking.id);
+                        this.confirmDialog.show("Do you want to delete ranking '" + ranking.name + "'?", async () => {
+                            const res = await this.app.rankingAccess.deleteRanking(ranking.id);
+                            if (res == "error") {
+                                this.app.errorDialog.showError("An error occured while deleting the ranking.");
+                                return;
+                            }
+
+                            if (this.app.selectedRankingId.value == ranking.id) {
+                                this.app.selectedRankingId.value = null;
+                            }
                         });
                     }
 
@@ -140,9 +150,16 @@ export class SettingsTab implements Component
                     btnRename.onclick = async () => {
                         inputRankingName.value = "";
                         this.editRankingDialog.show(ranking.id);
-                        this.editRankingDialog.primaryButton.onclick = () => {
-                            this.app.rankingAccess.renameRanking(ranking.id, inputRankingName.value);
+                        this.editRankingDialog.primaryButton.onclick = async () => {
                             this.editRankingDialog.hide();
+                            if (inputRankingName.value.trim() == "") {
+                                return;
+                            }
+
+                            const res = await this.app.rankingAccess.renameRanking(ranking.id, inputRankingName.value);
+                            if (res == "error") {
+                                this.app.errorDialog.showError("An error occured while renaming the ranking.");
+                            }
                         }
                     }
 

@@ -55,25 +55,6 @@ export class RankingAccess extends EventTarget
         });
     }
 
-    async addTable(rankingId: string, name: string): Promise<string | "error">
-    {
-        return this.rankingLock.withLock(async () => {
-            const res = await api.createTable(this.app, rankingId, name);
-            if (res == "error") {
-                return "error";
-            }
-
-            /* Preload caches */
-            const table = await this.getTable(res);
-            if (table == "error") {
-                return "error";
-            }
-
-            this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_TABLES_CHANGED, { "detail": rankingId }));
-            return res;
-        });
-    }
-
     /**
      * Returns the table for the given table id.
      */
@@ -170,7 +151,7 @@ export class RankingAccess extends EventTarget
                 this.tableIdToRankingId.delete(table.id);
             }
             this.tablesPerRanking.delete(rankingId);
-            this.rankings!.splice(this.rankings!.findIndex(x => x.id == rankingId), 1);
+            this.rankings = this.rankings!.filter(x => x.id !== rankingId);
 
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
             return "ok";
@@ -194,8 +175,10 @@ export class RankingAccess extends EventTarget
                 return "error";
             }
 
-            this.rankings!.splice(this.rankings!.findIndex(x => x.id == rankingId), 1);
-            this.rankings!.push({ "id": rankingId, "name": actualName });
+            const ranking = this.rankings!.find(x => x.id == rankingId);
+            if (ranking !== undefined) {
+                ranking.name = actualName;
+            }
 
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
             return "ok";
@@ -203,20 +186,19 @@ export class RankingAccess extends EventTarget
     }
 
     /**
-     * Invalidates the given ranking. The tables will be fetched from API again on the next call.
+     * Invalidates the given ranking. Tables and members will be fetched from API again on the next call.
      */
     async invalidateRanking(rankingId: string)
     {
-        return this.rankingLock.withLock(async () => {
-            if (!this.tablesPerRanking.has(rankingId)) {
-                return;
-            }
-
-            for (const table of this.tablesPerRanking.get(rankingId)!) {
-                this.tableIdToRankingId.delete(table.id);
-            }
-            this.tablesPerRanking.delete(rankingId);
-            this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_TABLES_CHANGED, { "detail": rankingId }));
+        return this.tableCacheLock.withLock(async () => {
+            return this.rankingLock.withLock(async () => {
+                for (const table of this.tablesPerRanking.get(rankingId) || []) {
+                    this.tableIdToRankingId.delete(table.id);
+                    this.tableCache.delete(table.id);
+                }
+                this.tablesPerRanking.delete(rankingId);
+                this.membersPerRanking.delete(rankingId);
+            });
         });
     }
 
@@ -247,12 +229,9 @@ export class RankingAccess extends EventTarget
             return "error";
         }
 
-        if (!this.membersPerRanking.has(rankingId)) {
-            await this.getMembersForRanking(rankingId);
-        }
-
-        this.membersPerRanking.get(rankingId)!.push(res);
+        await this.invalidateRanking(rankingId);
         this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_MEMBERS_CHANGED, { detail: rankingId }));
+        this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_TABLES_CHANGED, { detail: rankingId }));
         return res;
     }
 
@@ -273,12 +252,12 @@ export class RankingAccess extends EventTarget
         return this.tableCacheLock.withLock(async () => {
             return this.rankingLock.withLock(async () => {
                 try {
-                    /* Reset state */
-                    this.rankings = [];
+                    this.rankings = null;
                     this.tableCache.clear();
                     this.tableIdToRankingId.clear();
                     this.tablesPerRanking.clear();
-                    this.rankings = null;
+                    this.membersPerRanking.clear();
+                    this.tableEntryCache.clear();
                 } finally {
                     this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
                 }

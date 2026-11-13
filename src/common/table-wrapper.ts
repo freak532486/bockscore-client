@@ -245,11 +245,14 @@ export class ScoreTableRowWrapper
     /**
      * Changes the name of this row.
      */
-    async setName(newName: string) {
+    async setName(newName: string): Promise<boolean> {
         const res = await api.renameRow(this.app, this.id, newName);
         if (res == "ok") {
             this._name = newName;
+            return true;
         }
+
+        return false;
     }
 
     /**
@@ -354,7 +357,7 @@ function magicMean(arr: Array<number>) {
 
     let sum = 0;
     for (const s of arr) {
-        sum += s == 0 ? 1 : s ** e;
+        sum += s ** e;
     }
     sum /= arr.length;
 

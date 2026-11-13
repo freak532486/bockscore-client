@@ -55,6 +55,8 @@ export class RowDetailsDialog implements Component {
                 if (!tooLarge) {
                     this.imageData = new Blob([await compressed.arrayBuffer()], { "type": compressed.type });
                     const url = URL.createObjectURL(this.imageData);
+                    imagePreview.onload = () => URL.revokeObjectURL(url);
+                    imagePreview.onerror = () => URL.revokeObjectURL(url);
                     imagePreview.src = url;
                     imagePreviewDiv.classList.remove("d-none");
                 }
@@ -143,8 +145,8 @@ export class RowDetailsDialog implements Component {
             /* Change score if applies */
             let newScore: number | undefined = undefined;
             const num = Number(inputScore.value);
-            if (!Number.isNaN(num) && num > 0 && num <= 10) {
-                newScore = num;
+            if (!Number.isNaN(num) && num >= 1 && num <= 10) {
+                newScore = Math.round(num * 100) / 100;
             }
 
             /* Change row name if applies */

@@ -16,27 +16,23 @@ export class InputBlockerComponent implements Component
         });
     }
 
-    setEnabled(enabled: boolean)
+    private blockCount = 0;
+
+    private update()
     {
-        this.view.classList.toggle("active", enabled);
+        this.view.classList.toggle("active", this.blockCount > 0);
         this.view.classList.remove("show-feedback");
     }
 
-    runWithBlockedInput<T>(runnable: () => T): T {
-        try {
-            this.setEnabled(true);
-            return runnable();
-        } finally {
-            this.setEnabled(false);
-        }
-    }
-
     async runAsyncWithBlockedInput<T>(runnable: () => Promise<T>): Promise<T> {
+        this.blockCount++;
+        this.update();
+
         try {
-            this.setEnabled(true);
             return await runnable();
         } finally {
-            this.setEnabled(false);
+            this.blockCount--;
+            this.update();
         }
     }
 }

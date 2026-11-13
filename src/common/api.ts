@@ -586,36 +586,43 @@ export async function markOffEliminationEntry(
     return res.ok ? "ok" : "error";
 }
 
-async function authFetch(app: App, resource: string, options: RequestInit): Promise<Response>
-{
-    /* Add auth token header */
-    const headers = new Headers(options.headers);
+let pendingSignin: Promise<"ok" | "error"> | null = null;
 
-    if (app.authToken.value) {
-        headers.set("Authorization", `Bearer ${app.authToken.value}`);
+/**
+ * The server rotates the refresh token on every refresh and rejects the old one, so concurrent refreshes must share
+ * a single sign-in request.
+ */
+function sharedSignin(app: App): Promise<"ok" | "error">
+{
+    if (pendingSignin == null) {
+        pendingSignin = signin(app).finally(() => pendingSignin = null);
     }
 
-    /* First attempt */
-    const res1 = await basicFetch(app, resource, {
-        ...options,
-        headers
-    });
+    return pendingSignin;
+}
 
+async function authFetch(app: App, resource: string, options: RequestInit): Promise<Response>
+{
+    const fetchWithToken = (token: string | null) => {
+        const headers = new Headers(options.headers);
+        if (token) {
+            headers.set("Authorization", `Bearer ${token}`);
+        }
+
+        return basicFetch(app, resource, { ...options, headers });
+    };
+
+    const usedToken = app.authToken.value;
+    const res1 = await fetchWithToken(usedToken);
     if (res1.status !== 401) {
         return res1;
     }
 
-    /* Token refresh, then try again */
-    const signinRes = await signin(app);
-    if (signinRes == "error") {
+    if (app.authToken.value === usedToken && await sharedSignin(app) == "error") {
         return res1;
     }
 
-    /* Second attempt */
-    return basicFetch(app, resource, {
-        ...options,
-        headers
-    });
+    return fetchWithToken(app.authToken.value);
 }
 
 async function basicFetch(app: App, resource: string, options: RequestInit)

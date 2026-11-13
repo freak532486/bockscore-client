@@ -30,8 +30,7 @@ export class MobileScoreTableComponent implements Component
         }
     }
 
-    public async refresh() {
-        this.app.inputBlocker.setEnabled(true);
+    public refresh() {
         const group = this.view.querySelector("#div-entries") as HTMLElement;
         group.replaceChildren();
 
@@ -56,8 +55,6 @@ export class MobileScoreTableComponent implements Component
             );
             group.appendChild(entry);
         }
-
-        this.app.inputBlocker.setEnabled(false);
     }
 
     private createEntry(
@@ -88,6 +85,8 @@ export class MobileScoreTableComponent implements Component
         row.getImage().then(x => {
             if (x !== undefined) {
                 const url = URL.createObjectURL(x);
+                domImg.onload = () => URL.revokeObjectURL(url);
+                domImg.onerror = () => URL.revokeObjectURL(url);
                 domImg.src = url;
             }
         });
