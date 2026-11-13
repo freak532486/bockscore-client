@@ -12,6 +12,8 @@ import { MobileScoreTableComponent } from "./score-table";
 import template from "./tab-rankings.html";
 import templateTableSettingsDialog from "./tab-rankings.table-settings-dialog.html";
 
+const REFRESH_AFTER_HIDDEN_MS = 60_000;
+
 export class RankingsTabComponent implements Component
 {
     public readonly view: HTMLElement;
@@ -19,6 +21,8 @@ export class RankingsTabComponent implements Component
     private readonly updateLock = new Mutex();
     private readonly addTableItem: HTMLElement;
     private renderedTable: ScoreTableWrapper | null = null;
+    private tableComponent: MobileScoreTableComponent | null = null;
+    private hiddenSince: number | null = null;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
@@ -38,7 +42,7 @@ export class RankingsTabComponent implements Component
         const addTableDialog = new InputDialog("Add table");
         const inputTableName = addTableDialog.addTextInput("input-table-name", "Table name");
         addTableDialog.primaryButton.textContent = "Add";
-        this.view.appendChild(addTableDialog.view);
+        document.body.appendChild(addTableDialog.view);
 
         const btnAddTable = this.view.querySelector("#btn-add-table") as HTMLButtonElement;
         btnAddTable.onclick = () => {
@@ -54,6 +58,7 @@ export class RankingsTabComponent implements Component
 
         /* Setup table settings dialog */
         const tableSettingsDialogView = htmlToElement(templateTableSettingsDialog);
+        document.body.appendChild(tableSettingsDialogView);
         const tableSettingsDialog = new Modal(tableSettingsDialogView);
         const tableNameInput = tableSettingsDialogView.querySelector("#input-table-name") as HTMLInputElement;
         const tableScoringSelect = tableSettingsDialogView.querySelector("#input-scoring-method") as HTMLSelectElement;
@@ -117,12 +122,34 @@ export class RankingsTabComponent implements Component
             tableSettingsDialog.hide();
         };
 
+        /* Other users may have changed scores or entries while the page was in the background */
+        document.addEventListener("visibilitychange", () => this.onVisibilityChange());
+
         /* Create a table view whenever a table is selected */
         app.selectedTableId.subscribe(() => {
             this.highlightSelectedTable();
             this.renderTable();
         });
         this.renderTable();
+    }
+
+    private async onVisibilityChange()
+    {
+        if (document.visibilityState === "hidden") {
+            this.hiddenSince = Date.now();
+            return;
+        }
+
+        const hiddenFor = this.hiddenSince === null ? 0 : Date.now() - this.hiddenSince;
+        this.hiddenSince = null;
+
+        const rankingId = this.app.selectedRankingId.value;
+        if (rankingId == null || hiddenFor < REFRESH_AFTER_HIDDEN_MS) {
+            return;
+        }
+
+        await this.app.rankingAccess.invalidateRanking(rankingId);
+        await this.updateTables();
     }
 
     private async deleteTable(tableId: string)
@@ -242,6 +269,7 @@ export class RankingsTabComponent implements Component
             if (this.app.selectedRankingId.value == null || tableId == null) {
                 tableView.replaceChildren();
                 this.renderedTable = null;
+                this.tableComponent = null;
                 return;
             }
 
@@ -253,12 +281,15 @@ export class RankingsTabComponent implements Component
             if (table == undefined) {
                 tableView.replaceChildren();
                 this.renderedTable = null;
+                this.tableComponent = null;
                 this.app.errorDialog.showError("The selected table does not exist.");
                 return;
             }
 
+            const expandedRowId = this.renderedTable?.id === table.id ? this.tableComponent?.expandedRowId ?? null : null;
             this.renderedTable = table;
-            tableView.replaceChildren(new MobileScoreTableComponent(this.app, table, this.confirmDialog).view);
+            this.tableComponent = new MobileScoreTableComponent(this.app, table, this.confirmDialog, expandedRowId);
+            tableView.replaceChildren(this.tableComponent.view);
         });
     }
 

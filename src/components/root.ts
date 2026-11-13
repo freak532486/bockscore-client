@@ -9,6 +9,7 @@ import { LoginDialogComponent } from "./login-dialog";
 import "./root.css";
 import template from "./root.html";
 import { RankingsTabComponent } from "./tab-rankings";
+import { EliminationTabComponent } from "./tab-elimination";
 import { SettingsTab } from "./tab-settings";
 import { WheelTabComponent } from "./tab-wheel";
 
@@ -30,15 +31,6 @@ export class RootComponent implements Component
         this.view = htmlToElement(template);
         const tabRoot = this.view.querySelector("#tab-root") as HTMLElement;
 
-        /* Preload every selected ranking */
-        app.selectedRankingId.subscribe((val, _) => {
-            if (val == null) {
-                return;
-            }
-
-            app.rankingAccess.preloadRanking(val);
-        });
-
         /* Setup commonly used components */
         document.body.appendChild(app.errorDialog.view);
         document.body.appendChild(app.inputBlocker.view);
@@ -53,7 +45,7 @@ export class RootComponent implements Component
         /* Add each tab to page */
         this.tabs = [
             new RankingsTabComponent(app),
-            app.tabElimination,
+            new EliminationTabComponent(app),
             new WheelTabComponent(app),
             new SettingsTab(app)
         ];
@@ -139,7 +131,7 @@ export class RootComponent implements Component
 
         /* Create register dialog */
         this.registerDialog = this.createRegisterDialog();
-        this.view.appendChild(this.registerDialog.view);
+        document.body.appendChild(this.registerDialog.view);
 
         /* Auto-update username */
         const usernameSpan = logoutDiv.querySelector(".username") as HTMLSpanElement;
@@ -198,6 +190,7 @@ export class RootComponent implements Component
     {
         this.tabButtons.forEach((button, i) => button.classList.toggle("active", i === index));
         this.tabs.forEach((tab, i) => tab.view.classList.toggle("d-none", i !== index));
+        this.tabs[index]?.onShow?.();
     }
 
     private setRankingTabsVisible(visible: boolean)

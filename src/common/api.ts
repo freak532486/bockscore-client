@@ -31,7 +31,15 @@ export async function login(app: App, request: LoginRequest): Promise<"ok" | "ba
         return "error";
     }
 
-    const login = await response.json() as LoginResponse;
+    return applyLoginResponse(app, await response.json() as LoginResponse);
+}
+
+/**
+ * Stores the access token and user id. The token is set first, so loads triggered by the user id change are already
+ * authenticated.
+ */
+function applyLoginResponse(app: App, login: LoginResponse): "ok" | "error"
+{
     if (login.accessToken == undefined) {
         return "error";
     }
@@ -107,15 +115,7 @@ export async function signin(app: App): Promise<"ok" | "error">
         return "error";
     }
 
-    const login = await response.json() as LoginResponse;
-    if (login.accessToken == undefined) {
-        return "error";
-    }
-
-    app.authToken.value = login.accessToken;
-    app.userId.value = login.userId;
-    void updateUserInfo(app);
-    return "ok";
+    return applyLoginResponse(app, await response.json() as LoginResponse);
 }
 
 /**
@@ -220,7 +220,7 @@ export async function updateXsrfToken(app: App): Promise<"ok" | "error">
         return "error";
     }
 
-    app.csrfToken.value = csrfCookie;
+    app.csrfToken = csrfCookie;
     return "ok";
 }
 
@@ -414,10 +414,10 @@ export interface UserScore
     "value": number | undefined
 }
 
-export async function fetchUserScores(app: App, userIds: Array<string>): Promise<Array<UserScore> | "error">
+export async function fetchUserScores(app: App, memberIds: Array<string>): Promise<Array<UserScore> | "error">
 {
     const request = {
-        "memberIds": userIds
+        "memberIds": memberIds
     };
 
     const response = await authFetch(app, "/api/userscore/findMultiple", {
@@ -702,7 +702,7 @@ async function basicFetch(app: App, resource: string, options: RequestInit)
         headers.set("Content-Type", "application/json");
     }
 
-    headers.set("x-csrf-token", app.csrfToken.value || "");
+    headers.set("x-csrf-token", app.csrfToken || "");
 
     /* Do the fetch */
     return fetch(resource, {

@@ -225,10 +225,6 @@ export class ScoreTableRowWrapper
      */
     getScore(memberId: string): number | undefined
     {
-        if (memberId == undefined) {
-            return undefined;
-        }
-
         return this._data.get(memberId);
     }
 

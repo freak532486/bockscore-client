@@ -74,7 +74,7 @@ export class WheelTabComponent implements Component {
                 return;
             }
 
-            wheel.entries = app.tabElimination.remainingEntryNames;
+            wheel.entries = app.elimination.remainingEntryNames;
             textarea.value = wheel.entries.join("\n");
         }
 

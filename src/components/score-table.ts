@@ -14,14 +14,16 @@ export class MobileScoreTableComponent implements Component
     public readonly view: HTMLElement;
     private readonly list: HTMLElement;
     private readonly entries = new Map<string, ScoreTableEntryComponent>();
-    private expandedRowId: string | null = null;
+    private _expandedRowId: string | null;
 
     constructor(
         private readonly app: App,
         private readonly wrapper: ScoreTableWrapper,
-        private readonly confirmDialog: ConfirmDialog
+        private readonly confirmDialog: ConfirmDialog,
+        expandedRowId: string | null = null
     )
     {
+        this._expandedRowId = expandedRowId;
         this.view = htmlToElement(template);
         this.list = this.view.querySelector("#div-entries") as HTMLElement;
         this.refresh();
@@ -42,7 +44,7 @@ export class MobileScoreTableComponent implements Component
             return;
         }
 
-        const entry = this.expandedRowId === null ? undefined : this.entries.get(this.expandedRowId);
+        const entry = this._expandedRowId === null ? undefined : this.entries.get(this._expandedRowId);
         const image = [...ev.clipboardData?.files ?? []].find(x => isSupportedImageType(x.type));
         if (entry === undefined || image === undefined) {
             return;
@@ -52,6 +54,11 @@ export class MobileScoreTableComponent implements Component
         entry.uploadImage(image);
     };
 
+    get expandedRowId(): string | null
+    {
+        return this._expandedRowId;
+    }
+
     /**
      * Updates the view in place. Entries are only created, removed or moved when necessary.
      */
@@ -59,8 +66,8 @@ export class MobileScoreTableComponent implements Component
         const rows = this.wrapper.rows;
         const ids = new Set(rows.map(x => x.id));
 
-        if (this.expandedRowId !== null && !ids.has(this.expandedRowId)) {
-            this.expandedRowId = null;
+        if (this._expandedRowId !== null && !ids.has(this._expandedRowId)) {
+            this._expandedRowId = null;
         }
 
         for (const [rowId, entry] of this.entries) {
@@ -78,7 +85,7 @@ export class MobileScoreTableComponent implements Component
                 this.entries.set(row.id, entry);
             }
 
-            entry.update(row.id === this.expandedRowId);
+            entry.update(row.id === this._expandedRowId);
 
             const expectedPosition: Element | null = previous === null ? this.list.firstElementChild : previous.nextElementSibling;
             if (expectedPosition !== entry.view) {
@@ -100,11 +107,11 @@ export class MobileScoreTableComponent implements Component
 
     private toggle(rowId: string)
     {
-        this.expandedRowId = this.expandedRowId === rowId ? null : rowId;
+        this._expandedRowId = this._expandedRowId === rowId ? null : rowId;
         this.refresh();
 
-        if (this.expandedRowId !== null) {
-            this.entries.get(this.expandedRowId)?.view.scrollIntoView({ block: "nearest" });
+        if (this._expandedRowId !== null) {
+            this.entries.get(this._expandedRowId)?.view.scrollIntoView({ block: "nearest" });
         }
     }
 
@@ -118,7 +125,7 @@ export class MobileScoreTableComponent implements Component
         }
 
         const added = this.wrapper.rows.find(x => !existing.has(x.id));
-        this.expandedRowId = added?.id ?? null;
+        this._expandedRowId = added?.id ?? null;
         this.refresh();
 
         if (added !== undefined) {

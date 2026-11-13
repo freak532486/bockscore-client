@@ -25,6 +25,7 @@ export class ScoreTableEntryComponent implements Component
 
     private expanded = false;
     private editingName = false;
+    private nameDraft: string | null = null;
     private imageError: string | null = null;
 
     constructor(
@@ -47,6 +48,7 @@ export class ScoreTableEntryComponent implements Component
     {
         if (!expanded) {
             this.editingName = false;
+            this.nameDraft = null;
             this.imageError = null;
         }
 
@@ -139,10 +141,12 @@ export class ScoreTableEntryComponent implements Component
         (display.querySelector(".details-title") as HTMLElement).textContent = this.row.name;
         display.classList.toggle("d-none", this.editingName);
         form.classList.toggle("d-none", !this.editingName);
-        input.value = this.row.name;
+        input.value = this.nameDraft ?? this.row.name;
+        input.oninput = () => this.nameDraft = input.value;
 
         const cancel = () => {
             this.editingName = false;
+            this.nameDraft = null;
             this.update(true);
         };
 
@@ -170,6 +174,7 @@ export class ScoreTableEntryComponent implements Component
             }
 
             this.editingName = false;
+            this.nameDraft = null;
             this.actions.changed();
         };
     }

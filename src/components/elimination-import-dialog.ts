@@ -1,13 +1,8 @@
 import { Modal } from "bootstrap";
+import type { EliminationImportSettings } from "../common/elimination-state";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import template from "./elimination-import-dialog.html"
-
-export interface EliminationImportSettings
-{
-    entriesPerTable: number,
-    weightedImport: boolean
-}
 
 export class EliminationImportDialog implements Component
 {

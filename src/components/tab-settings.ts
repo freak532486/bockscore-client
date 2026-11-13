@@ -26,13 +26,15 @@ export class SettingsTab implements Component
     private userDeleteConfirmDialog = new InputDialog("Confirm deletion");
 
     private refreshLock: Mutex = new Mutex();
+    private shown = false;
+    private pendingSummaries: Array<RankingSummary> = [];
 
     constructor(private readonly app: App)
     {
         this.view = htmlToElement(template);
         this.editRankingDialog = new EditRankingDialog(app);
-        this.view.appendChild(this.editRankingDialog.view);
-        this.view.append(this.confirmDialog.view);
+        document.body.appendChild(this.editRankingDialog.view);
+        document.body.appendChild(this.confirmDialog.view);
 
         const inputPassword = this.userDeleteConfirmDialog.addTextInput("input-pw", "Confirm password");
         inputPassword.type = "password";
@@ -54,7 +56,7 @@ export class SettingsTab implements Component
 
             window.location.href = "/";
         }
-        this.view.appendChild(this.userDeleteConfirmDialog.view);
+        document.body.appendChild(this.userDeleteConfirmDialog.view);
 
         /* Refresh ranking list on every user change */
         app.rankingAccess.addEventListener(RankingAccess.EVENT_RANKINGS_CHANGED, () => this.updateRankingsView());
@@ -68,7 +70,7 @@ export class SettingsTab implements Component
 
         const addRankingButton = this.view.querySelector("#btn-add-ranking") as HTMLButtonElement;
         addRankingButton.onclick = () => addRankingDialog.modal.show();
-        this.view.appendChild(addRankingDialog.view);
+        document.body.appendChild(addRankingDialog.view);
 
         /* Make add ranking dialog work */
         addRankingDialog.primaryButton.onclick = async () => {
@@ -95,6 +97,12 @@ export class SettingsTab implements Component
         const usernameDisplay = this.view.querySelector("strong.username") as HTMLElement;
         app.username.subscribe((val, _) => usernameDisplay.textContent = val)
         usernameDisplay.textContent = app.username.value;
+    }
+
+    onShow()
+    {
+        this.shown = true;
+        this.fillPendingSummaries();
     }
 
     /**
@@ -183,29 +191,35 @@ export class SettingsTab implements Component
             }
         });
 
-        await this.fillSummaries(summaries);
+        /* The active ranking is loaded anyway. Other rankings are only loaded once this tab is actually viewed. */
+        this.pendingSummaries = summaries.filter(x => !x.active);
+        await Promise.all(summaries.filter(x => x.active).map(x => this.fillSummary(x)));
+        this.fillPendingSummaries();
     }
 
-    /**
-     * The active ranking is loaded first, so the other rankings do not delay it.
-     */
-    private async fillSummaries(summaries: Array<RankingSummary>)
+    private fillPendingSummaries()
     {
-        const fill = async (summary: RankingSummary) => {
-            const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(summary.rankingId);
+        if (!this.shown) {
+            return;
+        }
 
-            let numEntries = 0;
-            for (const tableHeader of tableHeaders) {
-                const table = await this.app.rankingAccess.getTable(tableHeader.id);
-                if (table !== "error") {
-                    numEntries += table.rows.length;
-                }
+        const summaries = this.pendingSummaries;
+        this.pendingSummaries = [];
+        summaries.forEach(x => this.fillSummary(x));
+    }
+
+    private async fillSummary(summary: RankingSummary)
+    {
+        const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(summary.rankingId);
+
+        let numEntries = 0;
+        for (const tableHeader of tableHeaders) {
+            const table = await this.app.rankingAccess.getTable(tableHeader.id);
+            if (table !== "error") {
+                numEntries += table.rows.length;
             }
+        }
 
-            summary.view.textContent = `${tableHeaders.length} tables, ${numEntries} entries.`;
-        };
-
-        await Promise.all(summaries.filter(x => x.active).map(fill));
-        await Promise.all(summaries.filter(x => !x.active).map(fill));
+        summary.view.textContent = `${tableHeaders.length} tables, ${numEntries} entries.`;
     }
 }

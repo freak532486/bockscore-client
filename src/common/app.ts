@@ -2,7 +2,7 @@ import { ErrorDialogComponent } from "../components/error-dialog";
 import { ImageViewer } from "../components/image-viewer";
 import { InputBlockerComponent } from "../components/input-blocker";
 import { MessageBox } from "../components/message-box";
-import { EliminationTabComponent } from "../components/tab-elimination";
+import { EliminationState } from "./elimination-state";
 import { Observable } from "./observable";
 import { RankingAccess } from "./ranking-access";
 import { SSEHandler } from "./sse-handler";
@@ -15,7 +15,7 @@ export class App
     public userId = new Observable<string | null>(null);
     public username = new Observable<string | null>(null);
     public authToken = new Observable<string | null>(null);
-    public csrfToken = new Observable<string | null>(null);
+    public csrfToken: string | null = null;
 
     public selectedRankingId = new Observable<string | null>(null);
     public selectedTableId = new Observable<string | null>(null);
@@ -28,5 +28,5 @@ export class App
     public inputBlocker: InputBlockerComponent = new InputBlockerComponent();
     public imageViewer: ImageViewer = new ImageViewer();
 
-    public tabElimination: EliminationTabComponent = new EliminationTabComponent(this);
+    public elimination: EliminationState = new EliminationState(this);
 };
