@@ -5,89 +5,51 @@ import type { App } from "./app";
  * A wrapper around a score table. Can be modified. Every modification will automatically be sent to the API. If that
  * call fails, the table is also not modified internally.
  */
+/**
+ * Scores of a ranking, by entry id and then by member id.
+ */
+export type ScoreMap = Map<string, Map<string, number>>;
+
 export class ScoreTableWrapper
 {
+    public readonly id: string;
+    public readonly header: ScoreTableHeaderWrapper;
+    private _rows: Array<ScoreTableRowWrapper>;
 
-    private constructor(
+    constructor(
         private readonly app: App,
-        public readonly id: string,
-        public readonly header: ScoreTableHeaderWrapper,
-        private _rows: Array<ScoreTableRowWrapper>,
-        private readonly userIdToMemberId: Map<string, string>
+        tableHeader: api.ScoreTableHeader,
+        members: Array<api.MemberInfo>,
+        scores: ScoreMap,
+        rows: Array<api.ScoreTableRow>
     )
-    {}
-
-    static async loadTable(app: App, rankingId: string, tableId: string): Promise<ScoreTableWrapper | "not_found" | "error"> {
-        /* First, we fetch the header */
-        const membersRes = await api.fetchMembersForRanking(app, rankingId);
-        if (membersRes == "error") {
-            return "error";
-        }
-
-        const allTables = await app.rankingAccess.getAllTablesForRanking(rankingId);
-        const matchingTableHeaders = allTables.filter(x => x.id == tableId);
-        if (matchingTableHeaders.length == 0) {
-            return "not_found";
-        }
-
-        const tableHeader = matchingTableHeaders[0]!;
-
+    {
         const userIdToMemberId = new Map<string, string>();
-        for (const member of membersRes) {
+        for (const member of members) {
             if (member.user) {
                 userIdToMemberId.set(member.user.id, member.id);
             }
         }
 
-        const header = new ScoreTableHeaderWrapper(
+        this.id = tableHeader.id;
+        this.header = new ScoreTableHeaderWrapper(
             app,
-            tableHeader?.name,
-            membersRes,
+            tableHeader.name,
+            members,
             tableHeader.scoring,
-            tableId,
+            tableHeader.id,
             userIdToMemberId,
         );
 
-        /* Fetch the scores */
-        const scoresRes = await api.fetchUserScores(app, membersRes.map(x => x.id));
-        if (scoresRes == "error") {
-            return "error";
-        }
-
-        const scoreMap = new Map<string, Map<string, number>>(); // entryId -> memberId -> value
-        for (const score of scoresRes) {
-            if (score.value == undefined) {
-                continue;
-            }
-
-            if (!scoreMap.has(score.entryId)) {
-                scoreMap.set(score.entryId, new Map());
-            }
-
-            scoreMap.get(score.entryId)!.set(score.memberId, score.value);
-        }
-
-        /* Fetch all table rows and create wrappers */
-        const rowsRes = await api.fetchScoreTableRows(app, tableId);
-        if (rowsRes == "error") {
-            return "error";
-        }
-
-        
-        const rows = await Promise.all(rowsRes.map(async x => new ScoreTableRowWrapper(
-                app,
-                x.id,
-                header,
-                x.name,
-                scoreMap.get(x.id) || new Map(),
-                x.joker == undefined ?
-                    null :
-                    header.members.find(y => y.id == x.joker!.id) || null
-            )
+        this._rows = rows.map(x => new ScoreTableRowWrapper(
+            app,
+            x.id,
+            this.header,
+            x.name,
+            scores.get(x.id) || new Map(),
+            x.joker == undefined ? null : members.find(y => y.id == x.joker!.id) || null,
+            x.hasImage !== false
         ));
-
-        /* Done */
-        return new ScoreTableWrapper(app, tableId, header, rows, userIdToMemberId);
     }
 
     get rows() {
@@ -101,7 +63,7 @@ export class ScoreTableWrapper
     {
         const res = await api.addRow(this.app, this.id, name);
         if (res !== "error") {
-            this._rows.push(new ScoreTableRowWrapper(this.app, res, this.header, name, new Map(), null));
+            this._rows.push(new ScoreTableRowWrapper(this.app, res, this.header, name, new Map(), null, false));
             return true;
         }
 
@@ -202,7 +164,8 @@ export class ScoreTableRowWrapper
         private readonly header: ScoreTableHeaderWrapper,
         private _name: string,
         private readonly _data: Map<string, number>,
-        private _jokerOf: api.MemberInfo | null //
+        private _jokerOf: api.MemberInfo | null,
+        private hasImage: boolean
     ) {}
 
     get name() {
@@ -322,6 +285,11 @@ export class ScoreTableRowWrapper
             return this.imageCache;
         }
 
+        if (!this.hasImage) {
+            this.imageCache = Promise.resolve(undefined);
+            return this.imageCache;
+        }
+
         this.imageCache = api.getEntryImage(this.app, this.id).then(x => {
             if (x == "error" || x == "not_found") {
                 return undefined;
@@ -339,6 +307,7 @@ export class ScoreTableRowWrapper
 
         const res = await api.setEntryImage(this.app, this.id, image);
         if (res == "ok") {
+            this.hasImage = true;
             this.imageCache = Promise.resolve(image);
             return true;
         }

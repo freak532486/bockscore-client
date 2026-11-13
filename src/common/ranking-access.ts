@@ -1,12 +1,19 @@
 import * as api from "./api";
 import type { App } from "./app";
 import { Mutex } from "./mutex";
-import { ScoreTableRowWrapper, ScoreTableWrapper } from "./table-wrapper";
+import { ScoreTableRowWrapper, ScoreTableWrapper, type ScoreMap } from "./table-wrapper";
 
 export interface Ranking
 {
     id: string,
     name: string
+}
+
+interface RankingData
+{
+    tables: Array<api.ScoreTableHeader>,
+    members: Array<api.MemberInfo>,
+    tablesById: Map<string, ScoreTableWrapper>
 }
 
 export class RankingAccess extends EventTarget
@@ -15,15 +22,11 @@ export class RankingAccess extends EventTarget
     public static readonly EVENT_TABLES_CHANGED = "tables_changed";
     public static readonly EVENT_MEMBERS_CHANGED = "members_changed";
 
-    private rankings: Array<Ranking> | null = [];
-    private tablesPerRanking: Map<string, Array<api.ScoreTableHeader>> = new Map();
+    private rankings: Array<Ranking> | null = null;
+    private rankingData: Map<string, Promise<RankingData | "error">> = new Map();
     private tableIdToRankingId: Map<string, string> = new Map();
-    private tableCache: Map<string, ScoreTableWrapper> = new Map();
-    private membersPerRanking: Map<string, Array<api.MemberInfo>> = new Map();
-    private tableEntryCache: Map<string, ScoreTableRowWrapper> = new Map();
 
     private rankingLock = new Mutex();
-    private tableCacheLock = new Mutex();
 
     constructor(private readonly app: App) {
         super();
@@ -33,26 +36,16 @@ export class RankingAccess extends EventTarget
     }
 
     /**
-     * Returns the list of all table ids in the given ranking. 
+     * Returns the headers of all tables in the given ranking.
      */
     async getAllTablesForRanking(rankingId: string): Promise<Array<api.ScoreTableHeader>> {
-        return this.rankingLock.withLock(async () => {
-            if (this.tablesPerRanking.has(rankingId)) {
-                return this.tablesPerRanking.get(rankingId)!;
-            }
+        const data = await this.loadRanking(rankingId);
+        if (data == "error") {
+            this.app.errorDialog.showError("An error occured while fetching score tables");
+            return [];
+        }
 
-            /* Load from API */
-            const res = await api.fetchTablesForRanking(this.app, rankingId);
-            if (res == "error") {
-                this.app.errorDialog.showError("An error occured while fetching score tables");
-                return [];
-            }
-
-            const tableIds = res.map(x => x.id);
-            tableIds.forEach(x => this.tableIdToRankingId.set(x, rankingId));
-            this.tablesPerRanking.set(rankingId, res);
-            return res;
-        });
+        return data.tables;
     }
 
     /**
@@ -60,36 +53,22 @@ export class RankingAccess extends EventTarget
      */
     async getTable(tableId: string): Promise<ScoreTableWrapper | "error">
     {
-        return this.tableCacheLock.withLock(async () => {
-            if (this.tableCache.has(tableId)) {
-                return this.tableCache.get(tableId)!;
-            }
+        const rankingId = this.tableIdToRankingId.get(tableId);
+        if (rankingId == undefined) {
+            return "error";
+        }
 
-            const rankingId = this.tableIdToRankingId.get(tableId);
-            if (rankingId == undefined) {
-                return "error";
-            }
+        const data = await this.loadRanking(rankingId);
+        if (data == "error") {
+            return "error";
+        }
 
-            const table = await ScoreTableWrapper.loadTable(this.app, rankingId, tableId);
-            if (table == "error" || table == "not_found") {
-                return "error";
-            }
-
-            this.tableCache.set(tableId, table);
-            for (const row of table.rows) {
-                this.tableEntryCache.set(row.id, row);
-            }
-
-            return table;
-        });
+        return data.tablesById.get(tableId) ?? "error";
     }
 
     async preloadRanking(rankingId: string)
     {
-        const allTables = await this.getAllTablesForRanking(rankingId);
-        for (const table of allTables) {
-            await this.getTable(table.id);
-        }
+        await this.loadRanking(rankingId);
     }
 
     getAllRankings(): Promise<Array<Ranking>>
@@ -98,7 +77,7 @@ export class RankingAccess extends EventTarget
             if (this.rankings !== null) {
                 return this.rankings;
             }
-            
+
             if (this.app.authToken.value == null) {
                 return [];
             }
@@ -147,10 +126,7 @@ export class RankingAccess extends EventTarget
                 return "error";
             }
 
-            for (const table of this.tablesPerRanking.get(rankingId) || []) {
-                this.tableIdToRankingId.delete(table.id);
-            }
-            this.tablesPerRanking.delete(rankingId);
+            this.rankingData.delete(rankingId);
             this.rankings = this.rankings!.filter(x => x.id !== rankingId);
 
             this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
@@ -190,32 +166,18 @@ export class RankingAccess extends EventTarget
      */
     async invalidateRanking(rankingId: string)
     {
-        return this.tableCacheLock.withLock(async () => {
-            return this.rankingLock.withLock(async () => {
-                for (const table of this.tablesPerRanking.get(rankingId) || []) {
-                    this.tableIdToRankingId.delete(table.id);
-                    this.tableCache.delete(table.id);
-                }
-                this.tablesPerRanking.delete(rankingId);
-                this.membersPerRanking.delete(rankingId);
-            });
-        });
+        this.rankingData.delete(rankingId);
     }
 
     async getMembersForRanking(rankingId: string): Promise<Array<api.MemberInfo>>
     {
-        if (this.membersPerRanking.has(rankingId)) {
-            return this.membersPerRanking.get(rankingId)!;
-        }
-
-        const members = await api.fetchMembersForRanking(this.app, rankingId);
-        if (members == "error") {
+        const data = await this.loadRanking(rankingId);
+        if (data == "error") {
             this.app.errorDialog.showError("An error occured trying to fetch members for ranking.");
             return [];
         }
 
-        this.membersPerRanking.set(rankingId, members);
-        return members;
+        return data.members;
     }
 
     async inviteMember(rankingId: string, name: string): Promise<api.MemberInfo | "user_not_found" | "error">
@@ -224,7 +186,7 @@ export class RankingAccess extends EventTarget
         if (res == "user_not_found") {
             return "user_not_found";
         }
-        
+
         if (res == "error") {
             return "error";
         }
@@ -237,33 +199,95 @@ export class RankingAccess extends EventTarget
 
     async getEntry(rankingId: string, entryId: string): Promise<ScoreTableRowWrapper | null>
     {
-        /* Load all tables of the ranking */
-        const tables = await this.getAllTablesForRanking(rankingId);
-        for (const table of tables) {
-            await this.getTable(table.id);
+        const data = await this.loadRanking(rankingId);
+        if (data == "error") {
+            return null;
         }
 
-        /* Now the entry cache is filled */
-        return this.tableEntryCache.get(entryId) || null;
+        for (const table of data.tablesById.values()) {
+            const row = table.rows.find(x => x.id == entryId);
+            if (row !== undefined) {
+                return row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Concurrent callers share one in-flight load per ranking. Failed loads are not cached.
+     */
+    private loadRanking(rankingId: string): Promise<RankingData | "error">
+    {
+        const cached = this.rankingData.get(rankingId);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const promise = this.fetchRanking(rankingId);
+        this.rankingData.set(rankingId, promise);
+        promise.then(res => {
+            if (res == "error" && this.rankingData.get(rankingId) === promise) {
+                this.rankingData.delete(rankingId);
+            }
+        });
+
+        return promise;
+    }
+
+    private async fetchRanking(rankingId: string): Promise<RankingData | "error">
+    {
+        const [tables, members] = await Promise.all([
+            api.fetchTablesForRanking(this.app, rankingId),
+            api.fetchMembersForRanking(this.app, rankingId)
+        ]);
+
+        if (tables == "error" || members == "error") {
+            return "error";
+        }
+
+        const [scores, rows] = await Promise.all([
+            members.length == 0 ? [] : api.fetchUserScores(this.app, members.map(x => x.id)),
+            tables.length == 0 ? [] : api.fetchScoreTableRowsForTables(this.app, tables.map(x => x.id))
+        ]);
+
+        if (scores == "error" || rows == "error") {
+            return "error";
+        }
+
+        const scoreMap: ScoreMap = new Map();
+        for (const score of scores) {
+            if (score.value == undefined) {
+                continue;
+            }
+
+            if (!scoreMap.has(score.entryId)) {
+                scoreMap.set(score.entryId, new Map());
+            }
+
+            scoreMap.get(score.entryId)!.set(score.memberId, score.value);
+        }
+
+        const tablesById = new Map<string, ScoreTableWrapper>();
+        for (const header of tables) {
+            const tableRows = rows.filter(x => x.scoreTable?.id == header.id);
+            tablesById.set(header.id, new ScoreTableWrapper(this.app, header, members, scoreMap, tableRows));
+            this.tableIdToRankingId.set(header.id, rankingId);
+        }
+
+        return { tables, members, tablesById };
     }
 
     private async invalidateCache()
     {
-        return this.tableCacheLock.withLock(async () => {
-            return this.rankingLock.withLock(async () => {
-                try {
-                    this.rankings = null;
-                    this.tableCache.clear();
-                    this.tableIdToRankingId.clear();
-                    this.tablesPerRanking.clear();
-                    this.membersPerRanking.clear();
-                    this.tableEntryCache.clear();
-                } finally {
-                    this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
-                }
-            });
+        return this.rankingLock.withLock(async () => {
+            try {
+                this.rankings = null;
+                this.rankingData.clear();
+                this.tableIdToRankingId.clear();
+            } finally {
+                this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
+            }
         });
     }
-
-
 }

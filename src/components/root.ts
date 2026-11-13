@@ -12,11 +12,16 @@ import { RankingsTabComponent } from "./tab-rankings";
 import { SettingsTab } from "./tab-settings";
 import { WheelTabComponent } from "./tab-wheel";
 
+const TAB_TABLES = 0;
+const TAB_SETTINGS = 3;
+
 export class RootComponent implements Component
 {
     public readonly view: HTMLElement;
     private readonly loginDialog: LoginDialogComponent;
     private readonly registerDialog: InputDialog;
+    private readonly tabs: Array<Component>;
+    private readonly tabButtons: Array<HTMLButtonElement>;
 
     constructor(private readonly app: App)
     {
@@ -43,23 +48,18 @@ export class RootComponent implements Component
             this.setTheme(storedTheme);
         }
 
-        /* Write selected ranking into localstorage */
-        this.syncRankingFromLocalStorage();
-
         /* Add each tab to page */
-        const tabs: Array<Component> = [
+        this.tabs = [
             new RankingsTabComponent(app),
             app.tabElimination,
             new WheelTabComponent(app),
             new SettingsTab(app)
         ];
 
-        tabs.forEach(x => {
+        this.tabs.forEach(x => {
             tabRoot.appendChild(x.view);
             x.view.classList.add("d-none");
         });
-
-        tabs[3]!.view.classList.remove("d-none"); // Initial tab is settings tab.
 
         /* Close the burger menu after any button inside it was used */
         const navbarContent = this.view.querySelector("#navbarContent") as HTMLElement;
@@ -77,56 +77,30 @@ export class RootComponent implements Component
         });
 
         /* Make tabs switchable */
-        const tabButtons = [...this.view.querySelectorAll(".tabs .nav-link")] as Array<HTMLButtonElement>;
-        for (let i = 0; i < tabButtons.length; i++) {
-            const button = tabButtons[i]!;
-            button.onclick = () => {
-                for (const otherButton of tabButtons) {
-                    otherButton.classList.remove("active");
-                }
+        this.tabButtons = [...this.view.querySelectorAll(".tabs .nav-link")] as Array<HTMLButtonElement>;
+        this.tabButtons.forEach((button, i) => button.onclick = () => this.showTab(i));
 
-                button.classList.add("active");
+        /* Restore the selected ranking, which also decides the initial tab */
+        this.syncRankingFromLocalStorage();
 
-                for (let j = 0; j < tabButtons.length; j++) {
-                    tabs[j]!.view.classList.toggle("d-none", i !== j);
-                }
-            }
-        }
-
-        /* Other tabs become selectable as soon as there is an active ranking */
+        /* Tabs other than settings are only selectable while the selected ranking exists */
         const makeTabsSelectable = async () => {
-            let activeRankingExists = true;
-            if (this.app.selectedRankingId.value == null) {
-                activeRankingExists = false;
-            }
-
-            const allRankings = await this.app.rankingAccess.getAllRankings();
-            if (!allRankings.find(x => x.id == this.app.selectedRankingId.value)) {
-                activeRankingExists = false;
-            }
-
-            tabButtons[0]!.classList.toggle("d-none", !activeRankingExists);
-            tabButtons[1]!.classList.toggle("d-none", !activeRankingExists);
-            tabButtons[2]!.classList.toggle("d-none", !activeRankingExists);
-
-            /* Switch to settings tab if active ranking doesnt exist */
-            if (activeRankingExists) {
+            const selected = this.app.selectedRankingId.value;
+            const allRankings = selected == null ? [] : await this.app.rankingAccess.getAllRankings();
+            if (selected !== this.app.selectedRankingId.value) {
                 return;
             }
 
-            tabButtons[0]!.classList.remove("active");
-            tabButtons[1]!.classList.remove("active");
-            tabButtons[2]!.classList.remove("active");
-            tabButtons[3]!.classList.add("active");
-
-            tabs[0]!.view.classList.add("d-none");
-            tabs[1]!.view.classList.add("d-none");
-            tabs[2]!.view.classList.add("d-none");
-            tabs[3]!.view.classList.remove("d-none");
+            const activeRankingExists = allRankings.some(x => x.id == selected);
+            this.setRankingTabsVisible(activeRankingExists);
+            if (!activeRankingExists) {
+                this.showTab(TAB_SETTINGS);
+            }
         }
 
         this.app.selectedRankingId.subscribe(() => makeTabsSelectable());
         this.app.rankingAccess.addEventListener(RankingAccess.EVENT_RANKINGS_CHANGED, () => makeTabsSelectable());
+        makeTabsSelectable();
 
         /* Switch between login/logout view depending on app state */
         const loginDiv = this.view.querySelector("div.login") as HTMLDivElement;
@@ -174,6 +148,17 @@ export class RootComponent implements Component
         if (app.authToken.value == null) {
             this.loginDialog.modal.show();
         }
+    }
+
+    private showTab(index: number)
+    {
+        this.tabButtons.forEach((button, i) => button.classList.toggle("active", i === index));
+        this.tabs.forEach((tab, i) => tab.view.classList.toggle("d-none", i !== index));
+    }
+
+    private setRankingTabsVisible(visible: boolean)
+    {
+        this.tabButtons.forEach((button, i) => button.classList.toggle("d-none", i !== TAB_SETTINGS && !visible));
     }
 
     private toggleDarkMode()
@@ -268,14 +253,20 @@ export class RootComponent implements Component
         return registerDialog;
     }
 
+    /**
+     * The selected ranking is stored by user id, because the user id is known right after sign in, while the username
+     * needs another request.
+     */
     private syncRankingFromLocalStorage()
     {
-        this.app.selectedRankingId.subscribe((val, old) => {
-            if (this.app.username.value == null) {
+        const storageKey = (userId: string) => "selectedRanking_" + userId;
+
+        this.app.selectedRankingId.subscribe(val => {
+            if (this.app.userId.value == null) {
                 return;
             }
-            
-            const key = "rankingId_" + this.app.username.value;
+
+            const key = storageKey(this.app.userId.value);
             if (val == null) {
                 window.localStorage.removeItem(key);
             } else {
@@ -283,17 +274,38 @@ export class RootComponent implements Component
             }
         });
 
+        const selectRanking = (rankingId: string | null) => {
+            this.app.selectedRankingId.value = rankingId;
+            this.setRankingTabsVisible(rankingId != null);
+            this.showTab(rankingId == null ? TAB_SETTINGS : TAB_TABLES);
+        };
+
         const loadFromStorage = () => {
+            const userId = this.app.userId.value;
+            selectRanking(userId == null ? null : window.localStorage.getItem(storageKey(userId)));
+        };
+
+        const migrateFromUsernameKey = () => {
             if (this.app.username.value == null) {
                 return;
             }
 
-            const key = "rankingId_" + this.app.username.value;
-            this.app.selectedRankingId.value = window.localStorage.getItem(key);
-        }
+            const legacyKey = "rankingId_" + this.app.username.value;
+            const legacyRankingId = window.localStorage.getItem(legacyKey);
+            if (legacyRankingId == null) {
+                return;
+            }
 
-        this.app.username.subscribe(() => loadFromStorage());
+            window.localStorage.removeItem(legacyKey);
+            if (this.app.selectedRankingId.value == null) {
+                selectRanking(legacyRankingId);
+            }
+        };
+
+        this.app.userId.subscribe(() => loadFromStorage());
+        this.app.username.subscribe(() => migrateFromUsernameKey());
         loadFromStorage();
+        migrateFromUsernameKey();
     }
 }
 

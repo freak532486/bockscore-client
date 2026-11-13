@@ -36,9 +36,9 @@ export async function login(app: App, request: LoginRequest): Promise<"ok" | "ba
         return "error";
     }
 
-    app.userId.value = login.userId;
     app.authToken.value = login.accessToken;
-    await updateUserInfo(app);
+    app.userId.value = login.userId;
+    void updateUserInfo(app);
     return "ok";
 }
 
@@ -112,9 +112,9 @@ export async function signin(app: App): Promise<"ok" | "error">
         return "error";
     }
 
-    app.userId.value = login.userId;
     app.authToken.value = login.accessToken;
-    await updateUserInfo(app);
+    app.userId.value = login.userId;
+    void updateUserInfo(app);
     return "ok";
 }
 
@@ -237,7 +237,7 @@ async function updateUserInfo(app: App): Promise<"ok" | "error">
     if (!response.ok) {
         return "error";
     }
-    
+
     const user = await response.json() as UserInfo;
     app.username.value = user.name;
     return "ok";
@@ -269,7 +269,7 @@ export async function fetchTablesForRanking(app: App, rankingId: string): Promis
 }
 
 /**
- * Creates a table for a ranking and returns its id. Returns error on error. 
+ * Creates a table for a ranking and returns its id. Returns error on error.
  */
 export async function createTable(app: App, rankingId: string, name: string): Promise<string | "error">
 {
@@ -359,16 +359,24 @@ export interface ScoreTableRow
 {
     "id": string,
     "name": string,
+    "hasImage"?: boolean,
+    "scoreTable"?: {
+        "id": string
+    },
     "joker"?: {
         "id": string,
         "name": string
     }
 }
 
-export async function fetchScoreTableRows(app: App, tableId: string): Promise<Array<ScoreTableRow> | "error">
+/**
+ * Fetches the rows of all given tables in a single request.
+ */
+export async function fetchScoreTableRowsForTables(app: App, tableIds: Array<string>): Promise<Array<ScoreTableRow> | "error">
 {
-    const response = await authFetch(app, "/api/scoreTableEntry?scoreTableId=" + tableId, {
-        method: "GET",
+    const response = await authFetch(app, "/api/scoreTableEntry/findMultiple", {
+        method: "POST",
+        body: JSON.stringify({ "tableIds": tableIds })
     });
 
     if (!response.ok) {
@@ -405,7 +413,7 @@ export async function fetchUserScores(app: App, userIds: Array<string>): Promise
 
 export async function createScore(app: App, entryId: string, memberId: string, value: number): Promise<string | "error">
 {
-    const response = await authFetch(app, 
+    const response = await authFetch(app,
         `/api/userscore/?entryId=${entryId}&memberId=${memberId}`, {
         method: "POST",
         "body": JSON.stringify({

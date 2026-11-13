@@ -10,6 +10,13 @@ import rankingTemplate from "./tab-settings.ranking.html"
 import * as api from "../common/api"
 import { EditRankingDialog } from "./tab-settings.edit-ranking-dialog";
 
+interface RankingSummary
+{
+    rankingId: string,
+    view: HTMLElement,
+    active: boolean
+}
+
 export class SettingsTab implements Component
 {
     public readonly view: HTMLElement;
@@ -93,6 +100,7 @@ export class SettingsTab implements Component
     private async updateRankingsView()
     {
         const spinner = this.view.querySelector("div.spinner-border") as HTMLElement;
+        const summaries: Array<RankingSummary> = [];
         await this.refreshLock.withLock(async () => {
             try {
                 spinner.classList.remove("d-none");
@@ -107,21 +115,9 @@ export class SettingsTab implements Component
                     const entry = htmlToElement(rankingTemplate);
                     (entry.querySelector(".ranking-name") as HTMLElement).textContent = ranking.name + (active ? " (Active)" : "");
 
-                    let numTables = 0;
-                    let numEntries = 0;
-
-                    const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(ranking.id);
-                    numTables = tableHeaders.length;
-                    for (const tableHeader of tableHeaders) {
-                        const table = await this.app.rankingAccess.getTable(tableHeader.id);
-                        if (table == "error") {
-                            continue;
-                        }
-
-                        numEntries += table.rows.length;
-                    }
-
-                    (entry.querySelector(".ranking-summary") as HTMLElement).textContent = `${numTables} tables, ${numEntries} entries.`;
+                    const summary = entry.querySelector(".ranking-summary") as HTMLElement;
+                    summary.textContent = "Loading…";
+                    summaries.push({ rankingId: ranking.id, view: summary, active });
 
                     /* Set active button */
                     const btnSetActive = entry.querySelector(".btn-make-ranking-active") as HTMLButtonElement;
@@ -171,5 +167,30 @@ export class SettingsTab implements Component
                 spinner.classList.add("d-none");
             }
         });
+
+        await this.fillSummaries(summaries);
+    }
+
+    /**
+     * The active ranking is loaded first, so the other rankings do not delay it.
+     */
+    private async fillSummaries(summaries: Array<RankingSummary>)
+    {
+        const fill = async (summary: RankingSummary) => {
+            const tableHeaders = await this.app.rankingAccess.getAllTablesForRanking(summary.rankingId);
+
+            let numEntries = 0;
+            for (const tableHeader of tableHeaders) {
+                const table = await this.app.rankingAccess.getTable(tableHeader.id);
+                if (table !== "error") {
+                    numEntries += table.rows.length;
+                }
+            }
+
+            summary.view.textContent = `${tableHeaders.length} tables, ${numEntries} entries.`;
+        };
+
+        await Promise.all(summaries.filter(x => x.active).map(fill));
+        await Promise.all(summaries.filter(x => !x.active).map(fill));
     }
 }
