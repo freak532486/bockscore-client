@@ -1,7 +1,7 @@
 import * as api from "./api";
 import type { App } from "./app";
 import { Mutex } from "./mutex";
-import { ScoreTableRowWrapper, ScoreTableWrapper, type ScoreMap } from "./table-wrapper";
+import { ScoreTableWrapper, type ScoreMap } from "./table-wrapper";
 
 export interface Ranking
 {
@@ -25,6 +25,7 @@ export class RankingAccess extends EventTarget
     private rankings: Array<Ranking> | null = null;
     private rankingData: Map<string, Promise<RankingData | "error">> = new Map();
     private tableIdToRankingId: Map<string, string> = new Map();
+    private entryImages: Map<string, Promise<Blob | undefined>> = new Map();
 
     private rankingLock = new Mutex();
 
@@ -197,21 +198,21 @@ export class RankingAccess extends EventTarget
         return res;
     }
 
-    async getEntry(rankingId: string, entryId: string): Promise<ScoreTableRowWrapper | null>
+    getEntryImage(entryId: string): Promise<Blob | undefined>
     {
-        const data = await this.loadRanking(rankingId);
-        if (data == "error") {
-            return null;
+        const cached = this.entryImages.get(entryId);
+        if (cached !== undefined) {
+            return cached;
         }
 
-        for (const table of data.tablesById.values()) {
-            const row = table.rows.find(x => x.id == entryId);
-            if (row !== undefined) {
-                return row;
-            }
-        }
+        const promise = api.getEntryImage(this.app, entryId).then(x => x == "error" || x == "not_found" ? undefined : x);
+        this.entryImages.set(entryId, promise);
+        return promise;
+    }
 
-        return null;
+    setEntryImage(entryId: string, image: Blob)
+    {
+        this.entryImages.set(entryId, Promise.resolve(image));
     }
 
     /**
@@ -285,6 +286,7 @@ export class RankingAccess extends EventTarget
                 this.rankings = null;
                 this.rankingData.clear();
                 this.tableIdToRankingId.clear();
+                this.entryImages.clear();
             } finally {
                 this.dispatchEvent(new CustomEvent(RankingAccess.EVENT_RANKINGS_CHANGED));
             }

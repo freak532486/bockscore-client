@@ -533,7 +533,12 @@ export async function setEntryImage(
 export interface EliminationEntry
 {
     entryId: string,
-    markedOff: boolean
+    name: string,
+    hasImage: boolean,
+    isJoker: boolean,
+    jokerName?: string,
+    markedOff: boolean,
+    score: number
 }
 
 export async function getEliminationTable

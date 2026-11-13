@@ -156,8 +156,6 @@ export class ScoreTableHeaderWrapper
 
 export class ScoreTableRowWrapper
 {
-    private imageCache: Promise<Blob | undefined> | null = null;
-
     constructor(
         private readonly app: App,
         public readonly id: string,
@@ -281,23 +279,7 @@ export class ScoreTableRowWrapper
 
     async getImage(): Promise<Blob | undefined>
     {
-        if (this.imageCache !== null) {
-            return this.imageCache;
-        }
-
-        if (!this.hasImage) {
-            this.imageCache = Promise.resolve(undefined);
-            return this.imageCache;
-        }
-
-        this.imageCache = api.getEntryImage(this.app, this.id).then(x => {
-            if (x == "error" || x == "not_found") {
-                return undefined;
-            }
-
-            return x;
-        });
-        return this.imageCache;
+        return this.hasImage ? this.app.rankingAccess.getEntryImage(this.id) : undefined;
     }
 
     async setImage(image: Blob): Promise<boolean> {
@@ -308,7 +290,7 @@ export class ScoreTableRowWrapper
         const res = await api.setEntryImage(this.app, this.id, image);
         if (res == "ok") {
             this.hasImage = true;
-            this.imageCache = Promise.resolve(image);
+            this.app.rankingAccess.setEntryImage(this.id, image);
             return true;
         }
 

@@ -1,6 +1,9 @@
 import type { App } from "./app";
 
-export type SSECallback = (data?: any) => void;
+/**
+ * The sender id is the id of the user who caused the event.
+ */
+export type SSECallback = (data?: any, senderId?: string) => void;
 
 export class SSEHandler
 {
@@ -65,7 +68,7 @@ export class SSEHandler
             }
 
             for (const handler of this.handlers.get(type) ?? []) {
-                handler(data);
+                handler(data, event.lastEventId || undefined);
             }
         });
     }

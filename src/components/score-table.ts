@@ -84,7 +84,7 @@ export class MobileScoreTableComponent implements Component
         jokerText.classList.toggle("d-none", row.jokerOf === null);
         jokerText.textContent = row.jokerOf === null ? "" : `Joker: ${row.jokerOf.name}`;
 
-        setupThumbnail(elem.querySelector("img.thumb") as HTMLImageElement, row, this.app.imageViewer);
+        setupThumbnail(elem.querySelector("img.thumb") as HTMLImageElement, row.name, () => row.getImage(), this.app.imageViewer);
 
         return elem;
     }

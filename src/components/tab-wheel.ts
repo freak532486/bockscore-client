@@ -74,17 +74,7 @@ export class WheelTabComponent implements Component {
                 return;
             }
 
-            const names: Array<string> = [];
-            for (const entry of app.tabElimination.entries) {
-                const row = await app.rankingAccess.getEntry(app.selectedRankingId.value, entry.entryId);
-                if (row == null || entry.markedOff) {
-                    continue;
-                }
-
-                names.push(row?.name);
-            }
-
-            wheel.entries = names;
+            wheel.entries = app.tabElimination.remainingEntryNames;
             textarea.value = wheel.entries.join("\n");
         }
 

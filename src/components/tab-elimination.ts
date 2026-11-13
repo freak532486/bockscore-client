@@ -1,6 +1,5 @@
 import * as api from "../common/api";
 import type { App } from "../common/app";
-import { ScoreTableRowWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -9,110 +8,280 @@ import { TabEliminationCardComponent } from "./tab-elimination-card";
 import "./tab-elimination.css";
 import template from "./tab-elimination.html";
 
+const REMOVED_BY_STORAGE_PREFIX = "eliminationRemovedBy_";
+
 export class EliminationTabComponent implements Component
 {
     public readonly view: HTMLElement;
     private readonly importDialog = new EliminationImportDialog();
     private readonly confirmDialog = new ConfirmDialog();
+    private readonly games: HTMLElement;
+    private readonly cards = new Map<string, TabEliminationCardComponent>();
 
-    private _entries: Array<api.EliminationEntry>;
+    private rankingId: string | null = null;
+    private serverEntries: Array<api.EliminationEntry> = [];
+
+    /**
+     * Removals cannot be undone until the next elimination starts, so own removals are applied on top of any server
+     * state, including responses to requests that were sent before the removal was saved.
+     */
+    private readonly ownRemovals = new Set<string>();
+    private pendingOwnEvents = 0;
+
+    private removedBy = new Map<string, string>();
+    private memberNames = new Map<string, string>();
     private syncGeneration = 0;
-    private viewGeneration = 0;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
+        this.games = this.view.querySelector(".games") as HTMLElement;
         document.body.appendChild(this.importDialog.view);
         document.body.appendChild(this.confirmDialog.view);
 
-        /* Fetch state from API */
-        this._entries = [];
-        const syncWithServer = async () => {
-            const generation = ++this.syncGeneration;
-            const oldEntries = this._entries;
+        app.selectedRankingId.subscribe(() => this.onRankingChanged());
 
-            if (this.app.selectedRankingId.value == null) {
-                this._entries = [];
-                this.updateView();
+        app.sseHandler.subscribe("elimination_started", () => {
+            this.resetRound();
+            this.syncWithServer();
+        });
+
+        app.sseHandler.subscribe("elimination_changed", (_, senderId) => {
+            if (senderId !== undefined && senderId === this.app.userId.value && this.pendingOwnEvents > 0) {
+                this.pendingOwnEvents--;
                 return;
             }
 
-            const res = await api.getEliminationTable(app, this.app.selectedRankingId.value);
-            if (generation !== this.syncGeneration) {
-                return;
-            }
+            this.syncWithServer(senderId);
+        });
 
-            if (res == "error") {
-                this._entries = [];
-                app.errorDialog.showError("There was an error fetching elimination list from server.");
-                this.updateView();
-                return;
-            }
-
-            const msg = await this.getAlertMessage(oldEntries, res);
-            if (generation !== this.syncGeneration) {
-                return;
-            }
-
-            if (msg !== null) {
-                this.app.messageBox.showMessage(msg);
-            }
-            this._entries = res;
-            this.updateView();
-        }
-
-        app.selectedRankingId.subscribe(() => syncWithServer());
-        app.sseHandler.subscribe("elimination_started", () => syncWithServer());
-        app.sseHandler.subscribe("elimination_changed", () => syncWithServer());
-
-        /* Make import button work */
         const btnImport = this.view.querySelector("#btn-elimination-import") as HTMLButtonElement;
         btnImport.onclick = () => this.importDialog.show(settings => this.performImport(settings));
     }
 
-    private async getAlertMessage(oldEntries: Array<api.EliminationEntry>, newEntries: Array<api.EliminationEntry>): Promise<string | null>
+    /**
+     * Names of all entries that have not been removed yet.
+     */
+    get remainingEntryNames(): Array<string> {
+        return this.sortedEntries().filter(x => !x.removed).map(x => x.entry.name);
+    }
+
+    private onRankingChanged()
     {
-        const DEFAULT_MSG = null;
+        this.rankingId = this.app.selectedRankingId.value;
+        this.serverEntries = [];
+        this.ownRemovals.clear();
+        this.pendingOwnEvents = 0;
+        this.memberNames = new Map();
+        this.removedBy = this.rankingId == null ? new Map() : loadRemovedBy(this.rankingId);
+        this.render();
 
-        if (this.app.selectedRankingId.value == null) {
-            return DEFAULT_MSG;
+        if (this.rankingId != null) {
+            this.loadMemberNames(this.rankingId);
+            this.syncWithServer();
         }
-        
-        if (oldEntries.length !== newEntries.length) {
-            return DEFAULT_MSG; 
+    }
+
+    private async loadMemberNames(rankingId: string)
+    {
+        const members = await this.app.rankingAccess.getMembersForRanking(rankingId);
+        if (rankingId !== this.rankingId) {
+            return;
         }
 
-        if (oldEntries.length == 0) {
-            return null;
-        }
-
-        const newMarkedOff: Array<string> = [];
-        for (let i = 0; i < oldEntries.length; i++) {
-            const oldEntry = oldEntries[i]!;
-            const newEntry = newEntries[i]!;
-
-            if (oldEntry.entryId !== newEntry.entryId) {
-                return DEFAULT_MSG;
-            }
-
-            if (oldEntry.markedOff == false && newEntry.markedOff == true) {
-                newMarkedOff.push(oldEntry.entryId);
-            }
-
-            if (oldEntry.markedOff == true && newEntry.markedOff == false) {
-                return DEFAULT_MSG;
+        for (const member of members) {
+            if (member.user) {
+                this.memberNames.set(member.user.id, member.name);
             }
         }
+    }
 
-        if (newMarkedOff.length == 0) {
-            return null;
+    private resetRound()
+    {
+        this.ownRemovals.clear();
+        this.pendingOwnEvents = 0;
+        this.removedBy.clear();
+        this.saveRemovedBy();
+    }
+
+    private isRemoved(entry: api.EliminationEntry): boolean
+    {
+        return entry.markedOff || this.ownRemovals.has(entry.entryId);
+    }
+
+    /**
+     * Fetches the elimination list and applies the differences to the view. A sender id attributes newly removed
+     * entries to that user.
+     */
+    private async syncWithServer(senderId?: string)
+    {
+        const rankingId = this.rankingId;
+        if (rankingId == null) {
+            return;
         }
 
-        if (newMarkedOff.length !== 1) {
-            return DEFAULT_MSG;
+        const generation = ++this.syncGeneration;
+        const res = await api.getEliminationTable(this.app, rankingId);
+        if (generation !== this.syncGeneration || rankingId !== this.rankingId) {
+            return;
         }
 
-        const name = (await this.app.rankingAccess.getEntry(this.app.selectedRankingId.value, newMarkedOff[0]!))?.name;
-        return `'${name}' was removed.`;
+        if (res == "error") {
+            this.app.errorDialog.showError("There was an error fetching elimination list from server.");
+            return;
+        }
+
+        const previousIds = new Set(this.serverEntries.map(x => x.entryId));
+        const sameRound = previousIds.size == res.length && res.every(x => previousIds.has(x.entryId));
+
+        if (sameRound) {
+            const previous = new Map(this.serverEntries.map(x => [x.entryId, x]));
+            for (const entry of res) {
+                if (!entry.markedOff || this.isRemoved(previous.get(entry.entryId)!)) {
+                    continue;
+                }
+
+                const remover = senderId === undefined ? undefined : this.memberNames.get(senderId);
+                if (remover !== undefined) {
+                    this.removedBy.set(entry.entryId, remover);
+                }
+
+                this.app.messageBox.showMessage(`'${entry.name}' was removed` + (remover === undefined ? "." : ` by ${remover}.`));
+            }
+        } else if (this.serverEntries.length > 0) {
+            this.resetRound();
+        }
+
+        const ids = new Set(res.map(x => x.entryId));
+        for (const entryId of [...this.removedBy.keys()]) {
+            if (!ids.has(entryId)) {
+                this.removedBy.delete(entryId);
+            }
+        }
+
+        this.serverEntries = res;
+        this.saveRemovedBy();
+        this.render();
+    }
+
+    private async eliminate(entry: api.EliminationEntry)
+    {
+        const rankingId = this.rankingId;
+        if (rankingId == null || this.isRemoved(entry)) {
+            return;
+        }
+
+        this.ownRemovals.add(entry.entryId);
+        this.pendingOwnEvents++;
+
+        const userId = this.app.userId.value;
+        const ownName = (userId == null ? undefined : this.memberNames.get(userId)) ?? this.app.username.value;
+        if (ownName != null) {
+            this.removedBy.set(entry.entryId, ownName);
+            this.saveRemovedBy();
+        }
+
+        this.render();
+        this.app.messageBox.showMessage(`'${entry.name}' was removed.`);
+
+        const res = await api.markOffEliminationEntry(this.app, rankingId, entry.entryId);
+        if (res == "ok") {
+            return;
+        }
+
+        if (rankingId === this.rankingId) {
+            this.ownRemovals.delete(entry.entryId);
+            this.pendingOwnEvents = Math.max(0, this.pendingOwnEvents - 1);
+            this.removedBy.delete(entry.entryId);
+            this.saveRemovedBy();
+            this.render();
+        }
+
+        this.app.errorDialog.showError(`An error occured while removing '${entry.name}'.`);
+    }
+
+    private sortedEntries(): Array<{ entry: api.EliminationEntry, removed: boolean }>
+    {
+        return this.serverEntries
+            .map(entry => ({ entry, removed: this.isRemoved(entry) }))
+            .sort((a, b) => {
+                if (a.entry.isJoker !== b.entry.isJoker) {
+                    return a.entry.isJoker ? -1 : 1;
+                }
+
+                return a.entry.name.localeCompare(b.entry.name);
+            });
+    }
+
+    /**
+     * Updates the view in place. Rows are only created, removed or moved when necessary, so nothing flickers and
+     * loaded images are kept.
+     */
+    private render()
+    {
+        const sorted = this.sortedEntries();
+
+        const ids = new Set(sorted.map(x => x.entry.entryId));
+        for (const [entryId, card] of this.cards) {
+            if (!ids.has(entryId)) {
+                card.view.remove();
+                this.cards.delete(entryId);
+            }
+        }
+
+        let previous: Element | null = null;
+        for (const { entry, removed } of sorted) {
+            let card = this.cards.get(entry.entryId);
+            if (card === undefined) {
+                card = this.createCard(entry);
+                this.cards.set(entry.entryId, card);
+            }
+
+            card.update(entry, removed, this.removedBy.get(entry.entryId) ?? null);
+
+            const expectedPosition: Element | null = previous === null ? this.games.firstElementChild : previous.nextElementSibling;
+            if (expectedPosition !== card.view) {
+                this.games.insertBefore(card.view, expectedPosition);
+            }
+
+            previous = card.view;
+        }
+
+        const remaining = sorted.filter(x => !x.removed).length;
+        const spanRemaining = this.view.querySelector("#span-remaining") as HTMLElement;
+        spanRemaining.classList.toggle("invisible", sorted.length == 0);
+        spanRemaining.classList.toggle("text-danger", remaining > sorted.length / 2);
+        spanRemaining.classList.toggle("text-success", remaining <= sorted.length / 2);
+        (this.view.querySelector("#num-current") as HTMLElement).textContent = String(remaining);
+        (this.view.querySelector("#num-total") as HTMLElement).textContent = String(sorted.length);
+    }
+
+    private createCard(entry: api.EliminationEntry): TabEliminationCardComponent
+    {
+        const loadImage = entry.hasImage ?
+            () => this.app.rankingAccess.getEntryImage(entry.entryId) :
+            () => Promise.resolve(undefined);
+
+        const card: TabEliminationCardComponent = new TabEliminationCardComponent(entry, loadImage, this.app.imageViewer, () => {
+            const current = card.entry;
+            this.confirmDialog.show(`Do you want to eliminate '${current.name}'?`, () => this.eliminate(current));
+        });
+
+        return card;
+    }
+
+    private saveRemovedBy()
+    {
+        if (this.rankingId == null) {
+            return;
+        }
+
+        try {
+            window.localStorage.setItem(
+                REMOVED_BY_STORAGE_PREFIX + this.rankingId,
+                JSON.stringify(Object.fromEntries(this.removedBy))
+            );
+        } catch {
+        }
     }
 
     private async performImport(settings: EliminationImportSettings)
@@ -159,95 +328,19 @@ export class EliminationTabComponent implements Component
             this.app.errorDialog.showError("An error occured while updating the elimination list.");
             return;
         }
+
+        this.resetRound();
+        this.syncWithServer();
     }
+}
 
-    private async updateView()
-    {
-        const generation = ++this.viewGeneration;
-        const games = this.view.querySelector(".games") as HTMLElement;
-
-        const spanRemaining = this.view.querySelector("#span-remaining") as HTMLElement;
-        const spanCurrent = this.view.querySelector("#num-current") as HTMLElement;
-        const spanTotal = this.view.querySelector("#num-total") as HTMLElement;
-
-        if (this.app.selectedRankingId.value == null) {
-            games.replaceChildren();
-            spanRemaining.classList.add("invisible");
-            return;
-        }
-
-        /* Sort entries */
-        interface SortedEntry {
-            row: ScoreTableRowWrapper;
-            markedOff: boolean;
-        };
-
-        const sorted: Array<SortedEntry> = [];
-        for (const apiEntry of this._entries) {
-            const entry = await this.app.rankingAccess.getEntry(this.app.selectedRankingId.value, apiEntry.entryId);
-            if (entry !== null) {
-                sorted.push({ row: entry, markedOff: apiEntry.markedOff });
-            }
-        }
-
-        if (generation !== this.viewGeneration) {
-            return;
-        }
-
-        sorted.sort((a, b) => {
-            if (a.row.jokerOf !== null && b.row.jokerOf == null) {
-                return -1;
-            }
-
-            if (a.row.jokerOf === null && b.row.jokerOf !== null) {
-                return 1;
-            }
-
-            return a.row.name.localeCompare(b.row.name);
-        })
-
-        let current = 0;
-        let total = 0;
-        const cards: Array<HTMLElement> = [];
-        for (const entry of sorted) {
-            total += 1;
-            if (entry.markedOff) {
-                continue;
-            }
-
-            current += 1;
-            const row = entry.row;
-            const card = new TabEliminationCardComponent(row, () => {
-                this.confirmDialog.show(`Do you want to eliminate '${row.name}'?`, () => this.eliminate(row, card.view));
-            }, this.app.imageViewer);
-            cards.push(card.view);
-        }
-
-        games.replaceChildren(...cards);
-        spanRemaining.classList.toggle("invisible", this._entries.length == 0);
-        spanRemaining.classList.toggle("text-danger", current > total / 2);
-        spanRemaining.classList.toggle("text-success", current <= total / 2);
-        spanCurrent.textContent = String(current);
-        spanTotal.textContent = String(total);
-    }
-
-    private async eliminate(row: ScoreTableRowWrapper, view: HTMLElement)
-    {
-        if (this.app.selectedRankingId.value === null) {
-            this.app.errorDialog.showError("No ranking is active.");
-            return;
-        }
-
-        view.remove();
-
-        const res = await api.markOffEliminationEntry(this.app, this.app.selectedRankingId.value, row.id);
-        if (res == "error") {
-            this.app.errorDialog.showError("An error occured while syncing elimination list state to server.");
-        }
-    }
-
-    get entries() {
-        return this._entries;
+function loadRemovedBy(rankingId: string): Map<string, string>
+{
+    try {
+        const stored = window.localStorage.getItem(REMOVED_BY_STORAGE_PREFIX + rankingId);
+        return new Map(Object.entries(stored == null ? {} : JSON.parse(stored) as Record<string, string>));
+    } catch {
+        return new Map();
     }
 }
 
