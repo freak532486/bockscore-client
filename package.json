@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "An alternative client to the bockscore app.",
   "scripts": {
-    "start": "serve -l tcp://0.0.0.0:3000",
+    "start": "serve -s -l tcp://0.0.0.0:3000",
     "build": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js",
     "dev": "esbuild src/main.ts --bundle --sourcemap --format=esm --loader:.css=css --loader:.html=text --loader:.woff=file --loader:.woff2=file --outfile=dist/bundle.js --watch",
     "check": "tsc -p tsconfig.json --noEmit"

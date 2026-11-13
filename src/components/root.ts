@@ -14,6 +14,7 @@ import { WheelTabComponent } from "./tab-wheel";
 
 const TAB_TABLES = 0;
 const TAB_SETTINGS = 3;
+const TAB_PATHS = ["/tables", "/elimination", "/wheel", "/settings"];
 
 export class RootComponent implements Component
 {
@@ -22,6 +23,7 @@ export class RootComponent implements Component
     private readonly registerDialog: InputDialog;
     private readonly tabs: Array<Component>;
     private readonly tabButtons: Array<HTMLButtonElement>;
+    private tabBeforeRedirect: number | null = null;
 
     constructor(private readonly app: App)
     {
@@ -78,7 +80,11 @@ export class RootComponent implements Component
 
         /* Make tabs switchable */
         this.tabButtons = [...this.view.querySelectorAll(".tabs .nav-link")] as Array<HTMLButtonElement>;
-        this.tabButtons.forEach((button, i) => button.onclick = () => this.showTab(i));
+        this.tabButtons.forEach((button, i) => button.onclick = () => {
+            this.tabBeforeRedirect = null;
+            this.navigate(i, "push");
+        });
+        window.addEventListener("popstate", () => this.navigate(this.tabFromLocation(), "replace"));
 
         /* Restore the selected ranking, which also decides the initial tab */
         this.syncRankingFromLocalStorage();
@@ -94,7 +100,7 @@ export class RootComponent implements Component
             const activeRankingExists = allRankings.some(x => x.id == selected);
             this.setRankingTabsVisible(activeRankingExists);
             if (!activeRankingExists) {
-                this.showTab(TAB_SETTINGS);
+                this.navigate(TAB_SETTINGS, "replace");
             }
         }
 
@@ -148,6 +154,40 @@ export class RootComponent implements Component
         if (app.authToken.value == null) {
             this.loginDialog.modal.show();
         }
+    }
+
+    /**
+     * Shows the given tab and updates the URL. Navigation by the user adds a history entry, while redirects replace the
+     * current one, so the back button never leads to a page that immediately redirects again.
+     */
+    private navigate(index: number, mode: "push" | "replace")
+    {
+        const path = TAB_PATHS[index]!;
+        if (window.location.pathname !== path) {
+            if (mode === "push") {
+                window.history.pushState(null, "", path);
+            } else {
+                window.history.replaceState(null, "", path);
+            }
+        }
+
+        this.showTab(index);
+    }
+
+    /**
+     * The tab requested by the URL. Unknown paths lead to the tables, and tabs other than settings need a selected
+     * ranking.
+     */
+    private tabFromLocation(): number
+    {
+        const index = TAB_PATHS.indexOf(window.location.pathname.replace(/\/+$/, ""));
+        const requested = index === -1 ? TAB_TABLES : index;
+        if (requested !== TAB_SETTINGS && this.app.selectedRankingId.value == null) {
+            this.tabBeforeRedirect = requested;
+            return TAB_SETTINGS;
+        }
+
+        return requested;
     }
 
     private showTab(index: number)
@@ -277,7 +317,12 @@ export class RootComponent implements Component
         const selectRanking = (rankingId: string | null) => {
             this.app.selectedRankingId.value = rankingId;
             this.setRankingTabsVisible(rankingId != null);
-            this.showTab(rankingId == null ? TAB_SETTINGS : TAB_TABLES);
+            if (rankingId != null && this.tabBeforeRedirect !== null) {
+                this.navigate(this.tabBeforeRedirect, "replace");
+                this.tabBeforeRedirect = null;
+            } else {
+                this.navigate(this.tabFromLocation(), "replace");
+            }
         };
 
         const loadFromStorage = () => {
