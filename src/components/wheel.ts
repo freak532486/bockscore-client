@@ -22,6 +22,7 @@ const WHEEL_TEXT_COLORS = [
     "#222222"
 ];
 
+const WHEEL_RADIUS = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) * 0.45;
 const WHEEL_MAX_ENTRY_LENGTH = 25;
 const SPIN_SPEED_IDLE = 20; // degrees per second
 
@@ -49,6 +50,11 @@ export class WheelComponent implements Component
 
     private spinData: Spin | undefined;
 
+    /* Pre-rendered layers. The wheel image is only re-rendered when the entries change. */
+    private readonly shadowImage: HTMLCanvasElement;
+    private readonly wheelImage: HTMLCanvasElement;
+    private wheelImageDirty = true;
+
     constructor(entries: Array<string>) {
         this._entries = [...entries];
         this.view = htmlToElement(template);
@@ -57,7 +63,10 @@ export class WheelComponent implements Component
         canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
 
-        this.drawWheel(ctx, entries);
+        this.shadowImage = renderShadowImage();
+        this.wheelImage = createLayer();
+
+        this.drawFrame(ctx);
 
         /* Load the click sound */
         this.loadSpinSound();
@@ -113,8 +122,12 @@ export class WheelComponent implements Component
             this.playSpinSound();
         }
 
-        /* Rotate canvas */
-        this.drawWheel(ctx, this.entries);
+        /* Skip drawing while the wheel is not visible (e.g. other tab selected) */
+        if (ctx.canvas.offsetParent === null) {
+            return;
+        }
+
+        this.drawFrame(ctx);
     }
 
     public spin(onWin: (entry: string) => void)
@@ -150,6 +163,7 @@ export class WheelComponent implements Component
     set entries(entries: Array<string>) {
         this.idle();
         this._entries = [...entries];
+        this.wheelImageDirty = true;
     }
 
     removeEntry(entry: string) {
@@ -159,6 +173,7 @@ export class WheelComponent implements Component
         }
 
         this._entries.splice(idx, 1);
+        this.wheelImageDirty = true;
     }
 
     private stopTimeout() {
@@ -168,92 +183,35 @@ export class WheelComponent implements Component
         }
     }
 
-    private drawWheel(
-        ctx: CanvasRenderingContext2D,
-        entries: string[]
-    ) {
+    /**
+     * Draws one animation frame by compositing the pre-rendered layers. Only the hub and the win indicator
+     * are drawn as paths each frame, since they are cheap.
+     */
+    private drawFrame(ctx: CanvasRenderingContext2D) {
+        if (this.wheelImageDirty) {
+            renderWheelImage(this.wheelImage, this._entries);
+            this.wheelImageDirty = false;
+        }
+
         const cx = CANVAS_WIDTH / 2;
         const cy = CANVAS_HEIGHT / 2;
-        const radius = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) * 0.45;
-        const sliceAngle = (Math.PI * 2) / entries.length;
 
-        const fontSize = calculateFontSize(
-            ctx,
-            entries,
-            radius
-        );
-
-        /* Clear canvas */
         ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        /* Apply translation and rotation */
+        /* Shadow does not rotate, its offset always points downwards */
+        ctx.drawImage(this.shadowImage, 0, 0);
+
+        /* Rotated wheel */
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(this.rotation);
-        ctx.translate(-cx, -cy);
-
-        /* Predraw shadow */
-        ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
-        ctx.shadowBlur = 20;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 6;
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        /* No shadow between slices */
-        ctx.shadowColor = "rgba(0, 0, 0, 0.0)";
-
-        let i = 0;
-        entries.forEach((label, index) => {
-            const start = index * sliceAngle - Math.PI / 2;
-            const end = start + sliceAngle;
-
-            // Alternate colours
-            ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length]!;
-
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, radius, start, end);
-            ctx.closePath();
-            ctx.fill();
-
-            // Draw the label.
-            const textAngle = start + sliceAngle / 2;
-
-            ctx.save();
-
-            ctx.translate(cx, cy);
-            ctx.rotate(textAngle);
-
-            ctx.textAlign = "right";
-            ctx.textBaseline = "middle";
-            ctx.fillStyle = WHEEL_TEXT_COLORS[i % WHEEL_TEXT_COLORS.length]!;
-            ctx.font = "${fontSize}px sans-serif";
-
-            // Position the text roughly 75% of the way out.
-            ctx.fillText(truncated(label), radius - 20, 0);
-
-            ctx.restore();
-            i += 1;
-        });
-
-        /* Draw in gray if no entries */
-        if (entries.length == 0) {
-            ctx.fillStyle = WHEEL_COLOR_DISABLED;
-
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-            ctx.closePath();
-            ctx.fill();
-        }
+        ctx.drawImage(this.wheelImage, -cx, -cy);
+        ctx.restore();
 
         // Centre hub.
-        ctx.restore();
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(cx, cy, radius * 0.1, 0, Math.PI * 2);
+        ctx.arc(cx, cy, WHEEL_RADIUS * 0.1, 0, Math.PI * 2);
         ctx.fillStyle = "#fff";
         ctx.fill();
         ctx.strokeStyle = "#333";
@@ -262,12 +220,11 @@ export class WheelComponent implements Component
         /* Win indicator */
         ctx.fillStyle = WHEEL_COLORS[this.getActiveEntryIdx() % WHEEL_COLORS.length]!;
         ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
 
         ctx.beginPath();
-        ctx.moveTo(cx + radius - 10, cy);
-        ctx.lineTo(cx + radius + 30, cy - 25);
-        ctx.lineTo(cx + radius + 30, cy + 25);
+        ctx.moveTo(cx + WHEEL_RADIUS - 10, cy);
+        ctx.lineTo(cx + WHEEL_RADIUS + 30, cy - 25);
+        ctx.lineTo(cx + WHEEL_RADIUS + 30, cy + 25);
         ctx.closePath();
 
         ctx.fill();
@@ -365,4 +322,88 @@ function normalizeAngle(angle: number) {
         ret += 2 * Math.PI;
     }
     return ret;
+}
+
+function createLayer(): HTMLCanvasElement
+{
+    const canvas = document.createElement("canvas");
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    return canvas;
+}
+
+/**
+ * Renders the drop shadow of the wheel. This never changes, so it is rendered only once.
+ */
+function renderShadowImage(): HTMLCanvasElement
+{
+    const layer = createLayer();
+    const ctx = layer.getContext("2d")!;
+
+    ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 6;
+
+    ctx.beginPath();
+    ctx.arc(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, WHEEL_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+
+    return layer;
+}
+
+/**
+ * Renders the unrotated wheel (slices and labels) into the given layer.
+ */
+function renderWheelImage(layer: HTMLCanvasElement, entries: string[])
+{
+    const ctx = layer.getContext("2d")!;
+    const cx = CANVAS_WIDTH / 2;
+    const cy = CANVAS_HEIGHT / 2;
+    const radius = WHEEL_RADIUS;
+    const sliceAngle = (Math.PI * 2) / entries.length;
+
+    const fontSize = calculateFontSize(ctx, entries, radius);
+
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    entries.forEach((label, i) => {
+        const start = i * sliceAngle - Math.PI / 2;
+        const end = start + sliceAngle;
+
+        // Alternate colours
+        ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length]!;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw the label.
+        const textAngle = start + sliceAngle / 2;
+
+        ctx.save();
+
+        ctx.translate(cx, cy);
+        ctx.rotate(textAngle);
+
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = WHEEL_TEXT_COLORS[i % WHEEL_TEXT_COLORS.length]!;
+        ctx.font = `${fontSize}px sans-serif`;
+
+        ctx.fillText(truncated(label), radius - 20, 0);
+
+        ctx.restore();
+    });
+
+    /* Draw in gray if no entries */
+    if (entries.length == 0) {
+        ctx.fillStyle = WHEEL_COLOR_DISABLED;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+        ctx.fill();
+    }
 }
