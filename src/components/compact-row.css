@@ -15,11 +15,11 @@
     transition: background-color 0.15s ease;
 }
 
-.compact-list > .compact-row:nth-child(odd) {
+.compact-list > :nth-child(odd) {
     background-color: rgba(var(--bs-emphasis-color-rgb), 0.04);
 }
 
-.compact-list > .compact-row:hover {
+.compact-list .compact-row:hover {
     background-color: rgba(var(--bs-emphasis-color-rgb), 0.08);
 }
 

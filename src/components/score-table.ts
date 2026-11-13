@@ -1,91 +1,141 @@
 import type { App } from "../common/app";
+import { isSupportedImageType } from "../common/image-utils";
 import type { ScoreTableRowWrapper, ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import "./compact-row.css";
 import type { Component } from "./component";
-import { RowDetailsDialog, type EntryUpdateCallback } from "./row-details-dialog";
+import type { ConfirmDialog } from "./confirm-dialog";
 import "./score-table.entry.css";
-import entry from "./score-table.entry.html";
+import { ScoreTableEntryComponent } from "./score-table.entry";
 import template from "./score-table.html";
-import { setupThumbnail } from "./thumbnail";
-
 
 export class MobileScoreTableComponent implements Component
 {
     public readonly view: HTMLElement;
+    private readonly list: HTMLElement;
+    private readonly entries = new Map<string, ScoreTableEntryComponent>();
+    private expandedRowId: string | null = null;
 
     constructor(
         private readonly app: App,
         private readonly wrapper: ScoreTableWrapper,
-        private readonly detailDialog: RowDetailsDialog
+        private readonly confirmDialog: ConfirmDialog
     )
     {
         this.view = htmlToElement(template);
+        this.list = this.view.querySelector("#div-entries") as HTMLElement;
         this.refresh();
 
-        /* Implement add row */
         const btnAddRow = this.view.querySelector("#btn-add-row") as HTMLButtonElement;
-        btnAddRow.onclick = async () => {
-            if (await wrapper.addRow("New Row")) {
-                this.refresh();
+        btnAddRow.onclick = () => this.addRow();
+
+        document.addEventListener("paste", this.onPaste);
+    }
+
+    /**
+     * Pasted images are uploaded to the expanded entry. The listener removes itself once this table is no longer
+     * shown, since tables are replaced instead of destroyed.
+     */
+    private readonly onPaste = (ev: ClipboardEvent) => {
+        if (!this.view.isConnected) {
+            document.removeEventListener("paste", this.onPaste);
+            return;
+        }
+
+        const entry = this.expandedRowId === null ? undefined : this.entries.get(this.expandedRowId);
+        const image = [...ev.clipboardData?.files ?? []].find(x => isSupportedImageType(x.type));
+        if (entry === undefined || image === undefined) {
+            return;
+        }
+
+        ev.preventDefault();
+        entry.uploadImage(image);
+    };
+
+    /**
+     * Updates the view in place. Entries are only created, removed or moved when necessary.
+     */
+    public refresh() {
+        const rows = this.wrapper.rows;
+        const ids = new Set(rows.map(x => x.id));
+
+        if (this.expandedRowId !== null && !ids.has(this.expandedRowId)) {
+            this.expandedRowId = null;
+        }
+
+        for (const [rowId, entry] of this.entries) {
+            if (!ids.has(rowId)) {
+                entry.view.remove();
+                this.entries.delete(rowId);
             }
         }
-    }
 
-    public refresh() {
-        const group = this.view.querySelector("#div-entries") as HTMLElement;
-        group.replaceChildren();
+        let previous: Element | null = null;
+        for (const row of rows) {
+            let entry = this.entries.get(row.id);
+            if (entry === undefined) {
+                entry = this.createEntry(row);
+                this.entries.set(row.id, entry);
+            }
 
-        for (const row of this.wrapper.rows) {
-            const entry = this.createEntry(
-                row,
-                async (newScore, newRowname, newImage, newJoker) => {
-                    const scoreChanged = newScore == undefined ? false : await row.setScore(newScore);
-                    const nameChanged = newRowname == undefined ? false : await row.setName(newRowname);
-                    const imageChanged = newImage == undefined ? false : await row.setImage(newImage);
-                    const jokerChanged = newJoker == undefined ? false : await this.wrapper.setJoker(newJoker, row.id);
-                    if (scoreChanged || nameChanged || imageChanged || jokerChanged) {
-                        this.refresh();
-                    }
-                },
-                async () => {
-                    const success = await this.wrapper.deleteRow(row.id);
-                    if (success) {
-                        this.refresh();
-                    }
-                }
-            );
-            group.appendChild(entry);
+            entry.update(row.id === this.expandedRowId);
+
+            const expectedPosition: Element | null = previous === null ? this.list.firstElementChild : previous.nextElementSibling;
+            if (expectedPosition !== entry.view) {
+                this.list.insertBefore(entry.view, expectedPosition);
+            }
+
+            previous = entry.view;
         }
     }
 
-    private createEntry(
-        row: ScoreTableRowWrapper,
-        update: EntryUpdateCallback,
-        deleteRow: () => void
-    ): HTMLElement
+    private createEntry(row: ScoreTableRowWrapper): ScoreTableEntryComponent
     {
-        const elem = htmlToElement(entry);
-        elem.onclick = () => this.detailDialog.show(row, this.wrapper, update, deleteRow);
+        return new ScoreTableEntryComponent(this.app, this.wrapper, row, {
+            toggle: () => this.toggle(row.id),
+            changed: () => this.refresh(),
+            remove: () => this.confirmDialog.show(`Do you want to delete '${row.name}'?`, () => this.deleteRow(row.id))
+        });
+    }
 
-        (elem.querySelector(".name") as HTMLElement).textContent = row.name;
+    private toggle(rowId: string)
+    {
+        this.expandedRowId = this.expandedRowId === rowId ? null : rowId;
+        this.refresh();
 
-        const avgScore = row.getAvgScore(this.wrapper.header.scoreMode);
-        (elem.querySelector(".fullscore") as HTMLElement).textContent = avgScore?.toFixed(2) ?? "–";
+        if (this.expandedRowId !== null) {
+            this.entries.get(this.expandedRowId)?.view.scrollIntoView({ block: "nearest" });
+        }
+    }
 
-        const ownMemberId = this.app.userId.value == null ?
-            undefined :
-            this.wrapper.header.userToMemberId.get(this.app.userId.value);
-        const ownScore = ownMemberId == undefined ? undefined : row.getScore(ownMemberId);
-        (elem.querySelector(".own-score") as HTMLElement).classList.toggle("d-none", ownMemberId == undefined);
-        (elem.querySelector(".own-score-value") as HTMLElement).textContent = ownScore == undefined ? "–" : String(ownScore);
+    private async addRow()
+    {
+        const existing = new Set(this.wrapper.rows.map(x => x.id));
+        const success = await this.app.inputBlocker.runAsyncWithBlockedInput(() => this.wrapper.addRow("New Row"));
+        if (!success) {
+            this.app.errorDialog.showError("An error occured while adding the entry.");
+            return;
+        }
 
-        const jokerText = elem.querySelector(".joker-text") as HTMLElement;
-        jokerText.classList.toggle("d-none", row.jokerOf === null);
-        jokerText.textContent = row.jokerOf === null ? "" : `Joker: ${row.jokerOf.name}`;
+        const added = this.wrapper.rows.find(x => !existing.has(x.id));
+        this.expandedRowId = added?.id ?? null;
+        this.refresh();
 
-        setupThumbnail(elem.querySelector("img.thumb") as HTMLImageElement, row.name, () => row.getImage(), this.app.imageViewer);
+        if (added !== undefined) {
+            const entry = this.entries.get(added.id);
+            entry?.startNameEdit();
+            entry?.view.scrollIntoView({ block: "nearest" });
+        }
+    }
 
-        return elem;
+    private async deleteRow(rowId: string)
+    {
+        const success = await this.app.inputBlocker.runAsyncWithBlockedInput(() => this.wrapper.deleteRow(rowId));
+        if (!success) {
+            this.app.errorDialog.showError("An error occured while deleting the entry.");
+            return;
+        }
+
+        this.refresh();
     }
 }

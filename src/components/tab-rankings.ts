@@ -6,8 +6,8 @@ import { RankingAccess } from "../common/ranking-access";
 import type { ScoreTableWrapper } from "../common/table-wrapper";
 import { htmlToElement } from "../common/utils";
 import type { Component } from "./component";
+import { ConfirmDialog } from "./confirm-dialog";
 import { InputDialog } from "./input-dialog";
-import { RowDetailsDialog } from "./row-details-dialog";
 import { MobileScoreTableComponent } from "./score-table";
 import template from "./tab-rankings.html";
 import templateTableSettingsDialog from "./tab-rankings.table-settings-dialog.html";
@@ -15,15 +15,14 @@ import templateTableSettingsDialog from "./tab-rankings.table-settings-dialog.ht
 export class RankingsTabComponent implements Component
 {
     public readonly view: HTMLElement;
-    private readonly detailDialog: RowDetailsDialog;
+    private readonly confirmDialog = new ConfirmDialog();
     private readonly updateLock = new Mutex();
     private readonly addTableItem: HTMLElement;
 
     constructor(private readonly app: App) {
         this.view = htmlToElement(template);
         this.addTableItem = this.view.querySelector(".add-table-item") as HTMLElement;
-        this.detailDialog = new RowDetailsDialog(app);
-        document.body.appendChild(this.detailDialog.view);
+        document.body.appendChild(this.confirmDialog.view);
 
         app.selectedRankingId.subscribe(() => this.updateTables());
         app.userId.subscribe(() => this.updateTables());
@@ -193,7 +192,7 @@ export class RankingsTabComponent implements Component
                 return;
             }
 
-            tableView.replaceChildren(new MobileScoreTableComponent(this.app, table, this.detailDialog).view);
+            tableView.replaceChildren(new MobileScoreTableComponent(this.app, table, this.confirmDialog).view);
         });
     }
 

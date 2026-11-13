@@ -4,7 +4,7 @@
  */
 .compact-row.ranking-row {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
     grid-template-rows: minmax(0, 1fr) max-content max-content minmax(0, 1fr);
     column-gap: 0.75rem;
     row-gap: 0;
@@ -47,9 +47,51 @@
     text-align: end;
 }
 
+.ranking-row .row-chevron {
+    grid-column: 5;
+    grid-row: 1 / -1;
+    align-self: center;
+}
+
+.compact-list > .score-entry.expanded {
+    background-color: rgba(var(--bs-emphasis-color-rgb), 0.06);
+}
+
+.entry-details {
+    padding: 0.5rem 0.75rem 1rem;
+    cursor: default;
+}
+
+.entry-details .details-scores {
+    --bs-table-bg: transparent;
+    max-width: 24rem;
+}
+
+.entry-details .score-buttons {
+    max-width: 30rem;
+}
+
+.entry-details .score-buttons .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.entry-details .details-image-preview {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: var(--bs-border-radius-sm);
+}
+
+.entry-details .details-image-preview.has-image {
+    cursor: zoom-in;
+}
+
 @media (max-width: 575.98px) {
     .compact-row.ranking-row {
-        grid-template-columns: auto auto auto minmax(0, 1fr);
+        grid-template-columns: auto auto auto minmax(0, 1fr) auto;
         column-gap: 0.5rem;
     }
 

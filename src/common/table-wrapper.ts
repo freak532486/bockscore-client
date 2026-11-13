@@ -163,11 +163,15 @@ export class ScoreTableRowWrapper
         private _name: string,
         private readonly _data: Map<string, number>,
         private _jokerOf: api.MemberInfo | null,
-        private hasImage: boolean
+        private _hasImage: boolean
     ) {}
 
     get name() {
         return this._name;
+    }
+
+    get hasImage() {
+        return this._hasImage;
     }
 
     get jokerOf() {
@@ -279,7 +283,7 @@ export class ScoreTableRowWrapper
 
     async getImage(): Promise<Blob | undefined>
     {
-        return this.hasImage ? this.app.rankingAccess.getEntryImage(this.id) : undefined;
+        return this._hasImage ? this.app.rankingAccess.getEntryImage(this.id) : undefined;
     }
 
     async setImage(image: Blob): Promise<boolean> {
@@ -289,8 +293,19 @@ export class ScoreTableRowWrapper
 
         const res = await api.setEntryImage(this.app, this.id, image);
         if (res == "ok") {
-            this.hasImage = true;
+            this._hasImage = true;
             this.app.rankingAccess.setEntryImage(this.id, image);
+            return true;
+        }
+
+        return false;
+    }
+
+    async removeImage(): Promise<boolean> {
+        const res = await api.deleteEntryImage(this.app, this.id);
+        if (res == "ok") {
+            this._hasImage = false;
+            this.app.rankingAccess.setEntryImage(this.id, undefined);
             return true;
         }
 

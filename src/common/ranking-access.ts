@@ -210,7 +210,7 @@ export class RankingAccess extends EventTarget
         return promise;
     }
 
-    setEntryImage(entryId: string, image: Blob)
+    setEntryImage(entryId: string, image: Blob | undefined)
     {
         this.entryImages.set(entryId, Promise.resolve(image));
     }

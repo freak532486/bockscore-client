@@ -530,6 +530,18 @@ export async function setEntryImage(
     return response.ok ? "ok" : "error";
 }
 
+/**
+ * Removes the entry image of the given entry.
+ */
+export async function deleteEntryImage(app: App, entryId: string): Promise<"ok" | "error">
+{
+    const response = await authFetch(app, "/api/scoreTableEntry/" + entryId + "/image", {
+        method: "DELETE"
+    });
+
+    return response.ok ? "ok" : "error";
+}
+
 export interface EliminationEntry
 {
     entryId: string,
